@@ -85,53 +85,58 @@ solos no permiten construir las pantallas solicitadas.
 ## 4. Términos de servicio y autorización
 
 No fue posible leer la página de términos: cualquier ruta HTML del dominio
-queda detrás del mismo challenge de Cloudflare. El encargo del propietario
-afirma expresamente que **HDrama prohíbe la extracción automatizada sin
-autorización**. Ante la combinación de:
+queda detrás del mismo challenge de Cloudflare.
 
-1. la afirmación del propietario,
-2. el challenge activo de Cloudflare, y
-3. la ausencia de una autorización documentada,
+El **2026-11-11 el propietario declaró tener autorización de HDrama**. No se
+aportó al repositorio un documento, credencial, API oficial ni endpoint
+autorizado que permita verificar esa autorización. A efectos de este proyecto:
 
-la conclusión es que **no existe base legítima para implementar una
-integración automatizada activa** en este momento.
+1. Se acepta la declaración del propietario para usar los **sitemaps públicos**
+   (que además están permitidos por `robots.txt`).
+2. **No se acepta** como permiso para eludir Cloudflare, CAPTCHA, DRM o
+   autenticación. Una autorización legítima debe traducirse en un canal de
+   acceso autorizado, no en sortear la protección.
+3. El adaptador que descargaría HTML protegido permanece deshabilitado hasta
+   disponer de una API/canal autorizado y verificable.
 
 No se solicitó autorización por correo porque el alcance de esta sesión es
 técnico y no se dispone de un canal verificado ni de credenciales. Queda
 registrado como bloqueo externo.
 
-## 5. Qué se puede implementar legítimamente
+## 5. Qué se ha implementado legítimamente
 
 | Módulo | Viabilidad | Decisión |
 |---|---|---|
-| Catálogo automático de HDrama | Bloqueado | Adaptador deshabilitado por defecto; requiere autorización |
-| Búsqueda automática | Bloqueada | No se inventa endpoint; se usa búsqueda local de demo |
-| Ficha de serie automática | Bloqueada | Solo importación manual de URL + apertura en navegador |
-| Episodios y enlaces | Bloqueado | No se extraen enlaces ni se evaden iframes/DRM |
+| Catálogo real de títulos desde sitemap | Permitida | Implementado: nuevas, tendencias, nuevos, catálogo y búsqueda por slug |
+| Búsqueda real | Parcial | Sobre títulos derivados del sitemap; sin metadatos de ficha |
+| Ficha real completa | Bloqueada | Solo ficha mínima con URL original y navegador |
+| Portadas, sinopsis, géneros, valoración, episodios | Bloqueados | Requieren HTML protegido o API autorizada |
+| Enlaces de video de HDrama | Bloqueado | No se extraen iframes, tokens ni DRM |
 | Navegación al sitio original | Permitida | Botón/acción de navegador de CloudStream |
 | Importación manual de enlaces | Permitida | El usuario pega una URL `https://es.hdrama.net/series/...` |
 | Datos de prueba locales | Permitida | Catálogo sintético con videos de dominio público |
 | Reproducción de videos de demo | Permitida | MP4/HLS públicos de prueba |
 
-## 6. Alternativas implementables (diseño)
+## 6. Alternativas implementadas
 
-1. **Modo demostración local (por defecto):** un catálogo sintético y
-   etiquetado como demo permite verificar `getMainPage`, `search`, `load` y
-   `loadLinks`, incluyendo MP4, HLS, fuente no disponible y caso de navegador.
-2. **Modo HDrama (navegador):** las tarjetas de ficha muestran un aviso de
-   autorización pendiente y un botón "Abrir en el navegador" que usa la URL
-   original. No se hace ninguna petición al sitio.
-3. **Importación manual:** si la búsqueda recibe una URL de HDrama, se crea
+1. **Catálogo real de sitemaps (por defecto):** se descargan los sitemaps
+   públicos declarados en `robots.txt` y se construyen las secciones con los
+   slugs. No se descarga HTML de fichas.
+2. **Ficha real mínima:** muestra el título derivado del slug y un episodio
+   "Abrir en el navegador"; el botón nativo de CloudStream abre la URL original.
+3. **Modo demo (diagnóstico):** catálogo sintético con MP4/HLS públicos para
+   verificar `getMainPage`, `search`, `load` y `loadLinks`, incluidos estados
+   de error y fuente no disponible.
+4. **Importación manual:** si la búsqueda recibe una URL de HDrama, se crea
    una ficha con el slug como título y la URL original; `load()` no descarga
-   HTML. El usuario puede abrirla en el navegador.
-4. **Enlaces de video:** solo se emitirán para el catálogo de demo o para
-   fuentes que el usuario importe manualmente y que sean URLs directas
-   públicas, nunca para contenido protegido de HDrama.
+   HTML.
+5. **Enlaces de video:** solo se emiten para el catálogo demo o para fuentes
+   públicas directas; nunca para contenido protegido de HDrama.
 
-## 7. Requisitos para habilitar la integración real
+## 7. Requisitos para habilitar la integración completa
 
-Para pasar de "adaptador deshabilitado" a "funcional" se necesita, como
-mínimo:
+Para pasar de "catálogo de sitemap + navegador" a "ficha y episodios reales"
+se necesita, como mínimo:
 
 1. Autorización escrita de HDrama para acceder a su HTML/API y para mostrar
    sus metadatos en una extensión de terceros.
@@ -142,16 +147,18 @@ mínimo:
 4. Fixtures HTML autorizados para pruebas de integración.
 5. Revisión de la política de privacidad y de la licencia de distribución.
 
-Mientras no se cumplan, el código dejará el adaptador en estado
-`AuthorizationStatus.NOT_GRANTED` y **no realizará peticiones a HDrama**.
+Aunque se cumplan 1-5, **no se implementará evasión de Cloudflare/DRM**: el
+acceso debe llegar por un canal que el sitio autorice y que no requiera sortear
+la protección. Mientras tanto, el adaptador protegido queda en
+`AuthorizationStatus.NOT_GRANTED` y no realiza peticiones al HTML.
 
 ## 8. Evidencia y límites de esta investigación
 
-- Se consultaron `robots.txt`, `sitemap.xml` y un sitemap hijo (tres
-  peticiones) más una petición a la home para comprobar el estado HTTP.
-- No se descargaron páginas de series, episodios ni assets.
+- Se consultaron `robots.txt`, `sitemap.xml` y los sitemaps hijos necesarios
+  para construir el catálogo real (peticiones puntuales, no rastreo masivo).
+- No se descargaron páginas de series, episodios ni assets protegidos.
 - No se usó ningún servicio de resolución de Cloudflare.
-- No se almacenaron datos de HDrama en el repositorio; las fixtures serán
+- No se almacenaron datos de HDrama en el repositorio; las fixtures son
   sintéticas.
 
 ## 9. Referencias
