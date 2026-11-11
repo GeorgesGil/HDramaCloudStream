@@ -1,7 +1,18 @@
-# Arquitectura (Fase 2)
+# Arquitectura (Fase 2, actualizada en Fase 3)
 
 Fecha: 2026-11-11. Este documento define la estructura antes de implementar.
 Cualquier cambio posterior debe reflejarse aquí y en `CHANGELOG.md`.
+
+## 0. Actualización de la Fase 3
+
+La implementación añadió un **catálogo real desde los sitemaps públicos**
+(`SitemapCatalogAdapter`, `SitemapClient`, `SitemapParser`). Es la única
+integración activa con HDrama: no descarga HTML protegido ni intenta resolver
+Cloudflare. El catálogo demo queda como modo de diagnóstico para probar el
+player y los estados.
+
+El adaptador `HdramaCatalogAdapter` que usaría HTML sigue deshabilitado. La
+autorización declarada por el propietario no se usa para eludir controles.
 
 ## 1. Restricciones de diseño
 
@@ -12,8 +23,8 @@ Cualquier cambio posterior debe reflejarse aquí y en `CHANGELOG.md`.
 3. **No inventar endpoints ni selectores.** El adaptador HTML queda
    deshabilitado y solo se prueba contra fixtures sintéticas que documentan el
    contrato esperado; no se afirma que correspondan al HTML real.
-4. **Funcionalidad verificable.** El catálogo de demostración local permite
-   probar todos los flujos de CloudStream sin tocar HDrama.
+4. **Funcionalidad verificable.** El catálogo real usa sitemaps públicos; el
+   catálogo demo permite probar todos los flujos sin tocar HDrama.
 5. **API vigente.** Se usan las funciones factoría actuales
    (`newHomePageResponse`, `newSearchResponseList`, `newTvSeriesLoadResponse`,
    `newEpisode`, `newExtractorLink`), no constructores deprecados.
@@ -42,7 +53,9 @@ HDramaCloudStream/
 │   ├── 05-pruebas.md
 │   ├── 06-instalacion.md
 │   ├── 07-privacidad.md
-│   └── 08-limitaciones.md
+│   ├── 08-limitaciones.md
+│   ├── 09-informe-final.md
+│   └── images/
 └── HDrama/
     ├── build.gradle.kts
     └── src/
@@ -53,8 +66,12 @@ HDramaCloudStream/
         │       ├── HDramaProvider.kt
         │       ├── catalog/
         │       │   ├── CatalogAdapter.kt
+        │       │   ├── CatalogSection.kt
         │       │   ├── DemoCatalogAdapter.kt
+        │       │   ├── SitemapCatalogAdapter.kt
         │       │   ├── HdramaCatalogAdapter.kt
+        │       │   ├── ManualHdramaImport.kt
+        │       │   ├── AccessCards.kt
         │       │   └── CatalogRepository.kt
         │       ├── parser/
         │       │   ├── HdramaHtmlParser.kt
@@ -68,17 +85,25 @@ HDramaCloudStream/
         │       │   └── PlaybackStatus.kt
         │       ├── network/
         │       │   ├── HttpTransport.kt
-        │       │   └── RetryPolicy.kt
+        │       │   ├── SafeHttpClient.kt
+        │       │   ├── UrlConnectionHttpTransport.kt
+        │       │   ├── SitemapClient.kt
+        │       │   ├── SitemapParser.kt
+        │       │   ├── RetryPolicy.kt
+        │       │   └── TtlCache.kt
         │       └── utils/
         │           ├── TextNormalizer.kt
         │           ├── UrlUtils.kt
+        │           ├── EpisodeId.kt
         │           ├── Diagnostics.kt
         │           └── AuthorizationPolicy.kt
         └── test/
             ├── fixtures/
-            │   ├── demo-catalog.json
             │   ├── hdrama-series.html
-            │   └── hdrama-episodes.html
+            │   ├── hdrama-detail.html
+            │   ├── hdrama-episodes.html
+            │   ├── sitemap-index.xml
+            │   └── sitemap-new-es.xml
             └── kotlin/com/hdrama/
                 ├── ...
 ```
@@ -91,8 +116,10 @@ CloudStream
    ▼
 CatalogRepository ── AuthorizationPolicy
    │
-   ├── DemoCatalogAdapter      (activo, datos locales)
-   └── HdramaCatalogAdapter    (deshabilitado sin autorización)
+   ├── SitemapCatalogAdapter   (activo: sitemaps publicos, sin HTML)
+   │      └── SitemapClient ── SafeHttpClient ── UrlConnectionHttpTransport
+   ├── DemoCatalogAdapter      (diagnostico: datos sinteticos + MP4/HLS)
+   └── HdramaCatalogAdapter    (HTML protegido: deshabilitado)
           │
           ├── HdramaHtmlParser (contrato + fixtures)
           └── HttpTransport    (timeouts/retry/allowlist)
@@ -124,14 +151,19 @@ LinkResolver ── MediaSource (Mp4/Hls/Unavailable/BrowserOnly/Unauthorized)
   - `suspend fun load(idOrUrl: String): Series?`
   - `suspend fun episodes(series: Series): List<Episode>`
   - `suspend fun resolve(episode: Episode): List<MediaSource>`
-- `DemoCatalogAdapter`: lee `demo-catalog.json` empaquetado como recurso de
-  test y, en runtime, una copia embebida en código para no depender de I/O de
-  recursos Android. Datos sintéticos; videos de dominio público.
+- `DemoCatalogAdapter`: catálogo sintético embebido en código. Datos
+  ficticios; videos de dominio público. Se usa como diagnóstico y como
+  respaldo si falla la red.
+- `SitemapCatalogAdapter`: catálogo real desde los sitemaps públicos. Deriva
+  títulos de los slugs, no descarga HTML y ofrece fichas de navegación.
 - `HdramaCatalogAdapter`: comprueba `AuthorizationPolicy`. Sin autorización
-  devuelve `CatalogAccessDenied`/`Unauthorized`, sin red. Con autorización
-  (futura) usaría `HdramaHtmlParser` y `HttpTransport`; hoy no se ejecuta.
-- `CatalogRepository`: selecciona el adaptador según el modo, aplica caché en
-  memoria con TTL, deduplica y normaliza.
+  lanza una excepción explícita, sin red. Con autorización (futura) usaría
+  `HdramaHtmlParser` y `HttpTransport`; hoy no se ejecuta.
+- `ManualHdramaImport`: convierte una URL de HDrama en una ficha navegable sin
+  descargar HTML.
+- `AccessCards`: tarjetas de navegación, importación y prueba de reproducción.
+- `CatalogRepository`: selecciona el adaptador, aplica caché en memoria con
+  TTL, deduplica y normaliza; cae al demo si el sitemap falla.
 
 ### `parser`
 
@@ -203,7 +235,8 @@ el HTML real de HDrama; queda pendiente de autorización y verificación.
 
 1. CloudStream pide `getMainPage(page, request)`.
 2. El provider mapea `request.data` a `CatalogSection`.
-3. `CatalogRepository` consulta el adaptador activo (demo por defecto).
+3. `CatalogRepository` consulta el adaptador de sitemaps (real) y cae al demo
+   si la red falla.
 4. Se aplican deduplicación, límite de página y `hasNext`.
 5. Se mapea a `SearchResponse` con `newTvSeriesSearchResponse`.
 
