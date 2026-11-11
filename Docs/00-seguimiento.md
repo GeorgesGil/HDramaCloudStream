@@ -19,7 +19,7 @@
 | Fase | Estado | Evidencia |
 |---|---|---|
 | 1. Investigación | En curso | `Docs/01-investigacion-cloudstream.md`, `Docs/02-investigacion-hdrama.md` |
-| 2. Diseño | Pendiente | — |
+| 2. Diseño | Completado | `Docs/03-arquitectura.md` |
 | 3. Implementación | Pendiente | — |
 | 4. Pruebas | Pendiente | — |
 | 5. Corrección | Pendiente | — |
@@ -70,10 +70,22 @@
 5. Mantener GitHub Actions deshabilitadas; la compilación y publicación de
    artefactos se hará localmente y se subirá a una rama `builds`.
 
+### 2026-11-11 — Fase 2: diseño
+
+- Se definió la arquitectura por capas: modelos puros, adaptadores de catálogo,
+  parser, red segura, resolución de enlaces y mapeo a CloudStream.
+- Se fijó el principio de **adaptador HDrama deshabilitado** mediante
+  `AuthorizationPolicy` (bandera `HDRAMA_AUTHORIZED=false`).
+- Se definió el catálogo de demostración local con secciones solicitadas,
+  paginación, búsqueda normalizada y estados de reproducción.
+- Se documentaron los flujos de pantalla principal, búsqueda, ficha,
+  reproducción, navegador y plegables.
+- Se definió el plan de 13 pruebas y los riesgos.
+
 ## Próximos pasos
 
-- Cerrar Fase 1 con PR.
-- Diseñar arquitectura (Fase 2).
-- Crear esqueleto Gradle y verificar que la cadena de compilación resuelve
+- Cerrar Fase 2 con PR.
+- Crear el esqueleto Gradle y verificar que la cadena de compilación resuelve
   dependencias con JDK 21.
-- Implementar, probar y compilar.
+- Implementar modelos, catálogo demo, parser, red y provider.
+- Ejecutar pruebas y compilar el `.cs3`.
