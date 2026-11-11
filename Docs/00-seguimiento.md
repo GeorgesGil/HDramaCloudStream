@@ -20,10 +20,10 @@
 |---|---|---|
 | 1. Investigación | Completado | `Docs/01-investigacion-cloudstream.md`, `Docs/02-investigacion-hdrama.md`; PR #1 |
 | 2. Diseño | Completado | `Docs/03-arquitectura.md`; PR #2 |
-| 3. Implementación | Completado | código en `HDrama/`; rama `phase/03-implementation` |
+| 3. Implementación | Completado | código en `HDrama/`; PR #3 |
 | 4. Pruebas | Completado | 61 pruebas, 0 fallos; `Docs/05-pruebas.md` |
 | 5. Corrección | Completado | 4 correcciones verificadas (episode URL, demo URL, video 403, tests) |
-| 6. Entrega | En curso | `.cs3`, `Docs/`, rama `builds`, informe final |
+| 6. Entrega | Completado | `.cs3`, `Docs/`, rama `builds`, release `v1.0.0`, informe final |
 
 ## Bitácora
 
@@ -115,8 +115,22 @@ catálogo real se limita al sitemap público y la navegación al sitio.
 6. Mantener GitHub Actions deshabilitadas; la compilación y publicación se
    hace localmente y se sube a una rama `builds`.
 
+### 2026-11-11 — Fase 6: entrega
+
+- PR #3 (Fase 3) mergeado a `main`.
+- Artefactos publicados en la rama `builds`:
+  - `HDrama.cs3` (83.106 bytes).
+  - `plugins.json`.
+  - `repo.json`.
+  - `BUILDS.md`.
+- Release `v1.0.0` creado con el `.cs3` adjunto.
+- GitHub Actions permanece deshabilitado (`enabled=false` verificado).
+- El repositorio sigue siendo privado; por tanto `repo.json` no funciona como
+  repositorio remoto de CloudStream. La instalación es local.
+- Informe final en `Docs/09-informe-final.md`.
+
 ## Próximos pasos
 
-- Cerrar Fase 3 con PR y merge a `main`.
-- Publicar el `.cs3` y `plugins.json` en la rama `builds`.
-- Verificar el estado final del repositorio y el informe de entrega.
+- Verificar la entrega final y el estado del repositorio.
+- Si se desea integración completa, obtener un canal autorizado verificable de
+  HDrama y habilitar el adaptador protegido sin evadir Cloudflare.
