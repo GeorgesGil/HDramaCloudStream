@@ -1,0 +1,34 @@
+# Gradle / Android
+.gradle/
+build/
+*/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Kotlin / Java
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.hprof
+
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+
+# Secretos y configuración local
+*.keystore
+*.jks
+.env
+.env.*
+
+# Artefactos de investigación (no forman parte del proyecto)
+_research/
+research/
+*.log
