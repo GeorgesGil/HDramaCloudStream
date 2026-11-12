@@ -51,7 +51,15 @@ class HDramaProvider(
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.TvSeries, TvType.AsianDrama)
     override val hasChromecastSupport = false
+
+    // Descarga: CloudStream descarga el HLS con el mismo enlace que reproduce
+    // (link.type == M3U8); el plugin solo necesita entregarlo sin caducar antes
+    // de tiempo y con los datos del episodio.
     override val hasDownloadSupport = true
+
+    // La primera reproduccion de una sesion puede incluir la resolucion del
+    // challenge de Cloudflare (WebView) y la llamada a la API de fuentes.
+    override val loadLinksTimeoutMs: Long? = 90_000L
 
     // El HTML de HDrama exige una sesion de Cloudflare: las secciones se piden
     // en serie para no abrir varios WebView a la vez y se declara el uso de

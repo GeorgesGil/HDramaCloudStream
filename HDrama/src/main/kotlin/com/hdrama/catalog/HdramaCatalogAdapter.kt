@@ -11,6 +11,8 @@ import com.hdrama.network.WebFetcherFactory
 import com.hdrama.parser.HdramaHtmlParser
 import com.hdrama.parser.HdramaSeriesPage
 import com.hdrama.sources.HdramaSourceClient
+import com.hdrama.sources.SourceProbe
+import com.hdrama.network.SourceProbeFactory
 import com.hdrama.utils.EpisodeId
 import com.hdrama.utils.UrlUtils
 import kotlinx.coroutines.CancellationException
@@ -31,12 +33,25 @@ import kotlinx.coroutines.CancellationException
 class HdramaCatalogAdapter(
     private val fetcher: WebFetcher = WebFetcherFactory.create(),
     private val parser: HdramaHtmlParser = HdramaHtmlParser(),
-    private val sourceClient: HdramaSourceClient = HdramaSourceClient(fetcher),
+    sourceClient: HdramaSourceClient? = null,
     private val htmlCache: TtlCache<String, String> = TtlCache(HTML_TTL_MS, 24),
     private val pageCache: TtlCache<String, HdramaSeriesPage> = TtlCache(HTML_TTL_MS, 24),
     private val browseCache: TtlCache<String, BrowsePage> = TtlCache(HTML_TTL_MS, 12),
     private val sourceCache: TtlCache<String, List<MediaSource>> = TtlCache(SOURCE_TTL_MS, 64),
+    probe: SourceProbe? = null,
 ) : CatalogAdapter {
+
+    /**
+     * Antes de llamar a `/api/episode-source` se carga el inicio del sitio
+     * (cacheado) para que la cookie de Cloudflare exista: el WAF de `/api/` no
+     * resuelve challenges, asi que un WebView lanzado sobre esa ruta solo
+     * perderia tiempo y acabaria en 403.
+     */
+    private val sourceClient: HdramaSourceClient =
+        sourceClient ?: HdramaSourceClient(fetcher, warmUp = ::warmUpSession)
+
+    /** Sonda que descarta enlaces muertos antes de entregarlos al player. */
+    private val sourceProbe: SourceProbe = probe ?: SourceProbeFactory.create()
 
     override suspend fun section(section: CatalogSection, page: Int): CatalogPage<Series> {
         val safePage = page.coerceAtLeast(1)
@@ -121,7 +136,12 @@ class HdramaCatalogAdapter(
             )
         }
 
-        val sources = sourceClient.sources(parsed.first, parsed.second)
+        val rawSources = sourceClient.sources(parsed.first, parsed.second)
+        // La cadena de HDrama puede traer enlaces caducados: se comprueba cada
+        // URL y solo se entregan las que responden. Si ninguna responde se
+        // entregan todas para que el player muestre el error real.
+        val sources = runCatching { sourceProbe.filterPlayable(rawSources) }
+            .getOrDefault(rawSources)
         sourceCache.put(cacheKey, sources)
         return sources
     }
@@ -136,6 +156,15 @@ class HdramaCatalogAdapter(
     /** Nota de estado usada por diagnosticos y pruebas. */
     fun implementationNote(): String =
         "Catalogo, fichas, episodios y fuentes HLS integrados desde el HTML real de HDrama."
+
+    /**
+     * Carga el inicio del sitio para asegurar la sesion de Cloudflare antes de
+     * llamar a la API de fuentes. Si falla, el episodio mostrara un mensaje
+     * claro y el catalogo seguira usando el respaldo por sitemaps.
+     */
+    private suspend fun warmUpSession() {
+        runCatching { fetchHtml(UrlUtils.HDRA_BASE_URL) }
+    }
 
     // ------------------------------------------------------------------
     // Navegacion y cache
@@ -156,7 +185,7 @@ class HdramaCatalogAdapter(
         val canonical = UrlUtils.normalizeHdramaUrl(url) ?: return null
         pageCache.get(canonical)?.let { return it }
         val html = try {
-            fetchHtml(canonical, targeted = true)
+            fetchHtml(canonical)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Throwable) {
@@ -174,7 +203,7 @@ class HdramaCatalogAdapter(
         browseCache.get(browseId)?.let { return it.series }
 
         val page = try {
-            val html = fetchHtml(canonical, targeted = true)
+            val html = fetchHtml(canonical)
             when {
                 canonical.trimEnd('/').endsWith("/categories") ->
                     parser.parseGenreCards(html)
@@ -222,25 +251,16 @@ class HdramaCatalogAdapter(
             }
     }
 
-    private suspend fun fetchHtml(url: String, targeted: Boolean = false): String {
+    /**
+     * Descarga el HTML con cache TTL.
+     *
+     * Si falta la sesion de Cloudflare, [WebFetchException] sube al llamador y
+     * [CatalogRepository] usa el respaldo por sitemaps; el fetcher ya aplica su
+     * propio backoff para no encadenar challenges fallidos.
+     */
+    private suspend fun fetchHtml(url: String): String {
         htmlCache.get(url)?.let { return it }
-        if (!targeted && System.currentTimeMillis() < htmlUnavailableUntil) {
-            throw WebFetchException(
-                WebFetchException.NO_HTTP_CODE,
-                "Sesion de Cloudflare no disponible; se usara el respaldo por sitemaps.",
-            )
-        }
-        val text = try {
-            fetcher.fetch(url, HTML_HEADERS)
-        } catch (error: WebFetchException) {
-            if (!targeted) {
-                // Sin challenge resuelto no se reintenta en cada seccion: se
-                // marca una ventana de espera y el repositorio usa los sitemaps.
-                htmlUnavailableUntil = System.currentTimeMillis() + HTML_BACKOFF_MS
-            }
-            throw error
-        }
-        htmlUnavailableUntil = 0L
+        val text = fetcher.fetch(url, HTML_HEADERS)
         htmlCache.put(url, text)
         return text
     }
@@ -267,14 +287,10 @@ class HdramaCatalogAdapter(
     /** Pagina de navegacion (genero, fuente u otra lista) con sus series. */
     data class BrowsePage(val series: Series, val items: List<Series>)
 
-    /** Milisegundos sin reintentar el HTML tras un fallo de Cloudflare. */
-    @Volatile
-    private var htmlUnavailableUntil: Long = 0L
 
     private companion object {
         const val HTML_TTL_MS = 5 * 60 * 1000L
         const val SOURCE_TTL_MS = 5 * 60 * 1000L
-        const val HTML_BACKOFF_MS = 10 * 60 * 1000L
         const val DESTACADOS_TITLE = "Destacados"
 
         val HTML_HEADERS = mapOf(

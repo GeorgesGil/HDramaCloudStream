@@ -6,7 +6,7 @@ package com.hdrama
  */
 object PluginInfo {
     const val NAME = "HDrama"
-    const val VERSION = 2
+    const val VERSION = 3
     const val API_VERSION = 1
     const val PLUGIN_CLASS = "com.hdrama.HDramaPlugin"
     const val LANGUAGE = "es"

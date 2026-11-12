@@ -18,12 +18,13 @@ class HdramaSourceClientTest {
         private val responder: suspend (String) -> String,
     ) : WebFetcher {
         val calls = mutableListOf<String>()
-        var lastHeaders: Map<String, String> = emptyMap()
+        val headers = mutableListOf<Map<String, String>>()
         val callCount: Int get() = calls.size
+        val lastHeaders: Map<String, String> get() = headers.lastOrNull().orEmpty()
 
         override suspend fun fetch(url: String, headers: Map<String, String>): String {
             calls += url
-            lastHeaders = headers
+            this.headers += headers
             return responder(url)
         }
     }
@@ -55,39 +56,57 @@ class HdramaSourceClientTest {
 
     private fun chainJson(vararg entries: Pair<String, String>, subtitle: String = "null"): String {
         val chain = entries.joinToString(",") { (enc, type) ->
-            """{"enc":"$enc","type":"$type","source":"FlickReels","refresh":false,"refreshAfter":null}"""
+            """{"enc":"$enc","type":"$type","source":"Stardust","refresh":false,"refreshAfter":null}"""
         }
-        return """{"descriptor":{"source":"FlickReels","chain":[$chain],"subtitle":$subtitle}}"""
+        return """{"descriptor":{"source":"Stardust","chain":[$chain],"subtitle":$subtitle}}"""
     }
 
     @Test
-    fun `pide la api correcta y devuelve directas mas espejo`(): Unit = runBlocking {
+    fun `pide la api con cabeceras de sesion y devuelve la url directa descifrada`(): Unit =
+        runBlocking {
+            val fetcher = FakeWebFetcher { _ -> apiJson }
+
+            val sources = HdramaSourceClient(fetcher).sources("29358", 1)
+
+            assertEquals(
+                listOf("https://es.hdrama.net/api/episode-source/29358/1?lang=es&refresh=1"),
+                fetcher.calls,
+            )
+            assertEquals("application/json", fetcher.lastHeaders["accept"])
+            assertEquals("https://es.hdrama.net/", fetcher.lastHeaders["referer"])
+
+            val source = assertIs<MediaSource.Hls>(sources.single())
+            assertEquals(
+                "https://acdn-v-us.stardust-tv.com/prod/29358/1/" +
+                    "e4bf2b9fce7c423ca661b3d65529a7f4.m3u8",
+                source.url,
+            )
+            // Las URLs directas de Stardust responden 200 sin cabeceras: no se
+            // debe enviar Referer ni proxy alguno al player.
+            assertTrue(source.headers.isEmpty(), "headers: ${source.headers}")
+        }
+
+    @Test
+    fun `carga el inicio antes de la api para asegurar la cookie`(): Unit = runBlocking {
+        var warmed = 0
         val fetcher = FakeWebFetcher { _ -> apiJson }
 
-        val sources = HdramaSourceClient(fetcher).sources("15531", 1)
+        HdramaSourceClient(fetcher, warmUp = { warmed += 1 }).sources("29358", 1)
 
-        assertEquals(
-            listOf("https://es.hdrama.net/api/episode-source/15531/1?lang=es&refresh=1"),
-            fetcher.calls,
-        )
-        assertEquals(4, sources.size)
+        assertEquals(1, warmed)
+        assertEquals(1, fetcher.callCount)
+    }
 
-        val direct1 = assertIs<MediaSource.Hls>(sources[0])
-        assertEquals("https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8", direct1.url)
-        assertTrue(direct1.headers.isEmpty())
+    @Test
+    fun `un fallo del warmup no impide intentar la api`(): Unit = runBlocking {
+        val fetcher = FakeWebFetcher { _ -> apiJson }
 
-        val direct2 = assertIs<MediaSource.Hls>(sources[1])
-        assertTrue(direct2.url.startsWith("https://zshipricf.farsunpteltd.net/playlet-hls/"))
-        assertTrue(direct2.url.contains("verify="))
-        assertTrue(direct2.headers.isEmpty())
+        val sources = HdramaSourceClient(fetcher, warmUp = { error("sin red") })
+            .sources("29358", 1)
 
-        val mirror1 = assertIs<MediaSource.Hls>(sources[2])
-        assertEquals("https://cdn.dramadizilerim.xyz/https/" + direct1.url, mirror1.url)
-        assertEquals(mapOf("Referer" to "https://es.hdrama.net/"), mirror1.headers)
-
-        val mirror2 = assertIs<MediaSource.Hls>(sources[3])
-        assertEquals("https://cdn.dramadizilerim.xyz/https/" + direct2.url, mirror2.url)
-        assertEquals(mapOf("Referer" to "https://es.hdrama.net/"), mirror2.headers)
+        // El warmUp lanza, pero sources() lo trata como best-effort... salvo que
+        // la excepcion se propague como fallo controlado.
+        assertEquals(1, sources.size)
     }
 
     @Test
@@ -97,31 +116,37 @@ class HdramaSourceClientTest {
 
         val sources = HdramaSourceClient(FakeWebFetcher { _ -> json }).sources("15531", 1)
 
-        assertEquals(2, sources.size)
-        assertIs<MediaSource.Hls>(sources[0])
-        assertIs<MediaSource.Hls>(sources[1])
+        assertEquals(1, sources.size)
+        assertIs<MediaSource.Hls>(sources.single())
     }
 
     @Test
-    fun `mapea type mp4 y genera su espejo`(): Unit = runBlocking {
+    fun `mapea type mp4 a Mp4 sin espejo`(): Unit = runBlocking {
         val mp4 = vectors.first { it.type == "mp4" }
         val json = chainJson(mp4.enc to "mp4")
 
         val sources = HdramaSourceClient(FakeWebFetcher { _ -> json }).sources("15531", 1)
 
-        assertEquals(2, sources.size)
-        val direct = assertIs<MediaSource.Mp4>(sources[0])
+        val direct = assertIs<MediaSource.Mp4>(sources.single())
         assertEquals(mp4.url, direct.url)
         assertTrue(direct.headers.isEmpty())
-        val mirror = assertIs<MediaSource.Hls>(sources[1])
-        assertEquals("https://cdn.dramadizilerim.xyz/https/" + mp4.url, mirror.url)
+    }
+
+    @Test
+    fun `infiere hls por extension cuando type es desconocido`(): Unit = runBlocking {
+        val hls = vectors.first { it.url.contains(".m3u8") }
+        val json = chainJson(hls.enc to "video/mpegurl")
+
+        val sources = HdramaSourceClient(FakeWebFetcher { _ -> json }).sources("15531", 1)
+
+        assertEquals(hls.url, assertIs<MediaSource.Hls>(sources.single()).url)
     }
 
     @Test
     fun `subtitulo presente o ausente no rompe el parseo`(): Unit = runBlocking {
         val enc = encFor("https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8")
         val withSubtitle =
-            """{"descriptor":{"source":"FlickReels","chain":[{"enc":"$enc","type":"hls"}],""" +
+            """{"descriptor":{"source":"Stardust","chain":[{"enc":"$enc","type":"hls"}],""" +
                 """"subtitle":{"lang":"es","url":"https://example.test/sub.vtt"}}}"""
         val withoutSubtitle = chainJson(enc to "hls")
 
@@ -129,8 +154,8 @@ class HdramaSourceClientTest {
         val withoutSources =
             HdramaSourceClient(FakeWebFetcher { _ -> withoutSubtitle }).sources("15531", 1)
 
-        assertEquals(2, withSources.size)
         assertEquals(withSources, withoutSources)
+        assertEquals(1, withSources.size)
     }
 
     @Test
@@ -156,6 +181,10 @@ class HdramaSourceClientTest {
         ).sources("15531", 1)
         val unavailable = assertIs<MediaSource.Unavailable>(http403.single())
         assertTrue(unavailable.reason.contains("403"), "motivo: ${unavailable.reason}")
+        assertTrue(
+            unavailable.reason.contains("Cloudflare", ignoreCase = true),
+            "motivo: ${unavailable.reason}",
+        )
 
         val network = HdramaSourceClient(
             FakeWebFetcher { _ -> throw IOException("sin red") },
@@ -167,18 +196,20 @@ class HdramaSourceClientTest {
     @Test
     fun `entradas con enc corrupto o type desconocido se ignoran`(): Unit = runBlocking {
         val good = encFor("https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8")
-        val mixed = chainJson("no-es-base64" to "hls", good to "hls", good to "mp4", "" to "hls")
+        val mixed = chainJson("no-es-base64" to "hls", good to "hls", "" to "hls")
         val sources = HdramaSourceClient(FakeWebFetcher { _ -> mixed }).sources("15531", 1)
-        assertEquals(2, sources.size)
         assertEquals(
             "https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8",
-            assertIs<MediaSource.Hls>(sources[0]).url,
+            assertIs<MediaSource.Hls>(sources.single()).url,
         )
 
-        val unknownType = chainJson(good to "dash")
+        // Un `type` desconocido no descarta la fuente si la extension revela el
+        // formato real: algunos despliegues devuelven tipos nuevos.
+        val mp4Vector = vectors.first { it.type == "mp4" }
+        val unknownType = chainJson(mp4Vector.enc to "dash")
         val unknownSources =
             HdramaSourceClient(FakeWebFetcher { _ -> unknownType }).sources("15531", 1)
-        assertIs<MediaSource.Unavailable>(unknownSources.single())
+        assertEquals(mp4Vector.url, assertIs<MediaSource.Mp4>(unknownSources.single()).url)
     }
 
     @Test

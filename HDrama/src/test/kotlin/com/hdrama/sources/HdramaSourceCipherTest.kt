@@ -32,13 +32,19 @@ class HdramaSourceCipherTest {
     @Test
     fun `descifra los vectores reales capturados del sitio`() {
         val vectors = vectors().filter { it.type == "hls" }
-        assertEquals(3, vectors.size)
+        assertEquals(4, vectors.size)
         vectors.forEach { vector ->
             assertEquals(vector.url, HdramaSourceCipher.decrypt(vector.enc), "vector: ${vector.url}")
         }
+        // Vector capturado el 2026-11-12: fuente Stardust (antes FlickReels).
+        assertEquals(
+            "https://acdn-v-us.stardust-tv.com/prod/29358/1/" +
+                "e4bf2b9fce7c423ca661b3d65529a7f4.m3u8",
+            HdramaSourceCipher.decrypt(vectors[0].enc),
+        )
         assertEquals(
             "https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8",
-            HdramaSourceCipher.decrypt(vectors[0].enc),
+            HdramaSourceCipher.decrypt(vectors[1].enc),
         )
     }
 

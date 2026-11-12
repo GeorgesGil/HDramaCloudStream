@@ -3,6 +3,114 @@
 Todas las fechas en ISO 8601. Formato basado en
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [v1.2.0] - 2026-11-12
+
+Versión 3 del plugin (el número de release es `v1.2.0`; el entero interno del
+`.cs3` es `version = 3`). Reescribe la capa de red para que la reproducción y la
+descarga de video HLS funcionen de verdad.
+
+### Añadido
+
+- `CloudflareSession` (interfaz) y `NoCloudflareSession` para aislar la sesión
+  de Cloudflare del resto de la red y poder probarla en JVM con dobles.
+- `WebViewCloudflareSession`: resuelve el Managed Challenge **una sola vez**.
+  Carga `https://es.hdrama.net/` en un único WebView, sondea
+  `CookieManager.getCookie()` cada 350 ms hasta que aparece `cf_clearance`
+  (timeout 75 s) y destruye el WebView. Guarda la cookie y el User-Agent por
+  defecto del WebView (deben coincidir con los del challenge).
+- `HdramaHttpFetcher`: fetcher principal. Todas las peticiones van por OkHttp con
+  `app.get` de CloudStream (`cacheTime = 0`), enviando `cookie`, `user-agent`,
+  `referer: https://es.hdrama.net/` y `accept-language`; en `/api/` envía
+  `accept: application/json`. Serializa peticiones con un `Mutex`, reintenta una
+  vez renovando la sesión ante 403/503 y usa `WebViewFetcher` como respaldo.
+- `CloudstreamHttpTransport`, `HdramaHttpTransport` y `HdramaHttpResponse`:
+  transporte inyectable para las pruebas JVM del fetcher.
+- Sonda de disponibilidad de enlaces (`SourceProbe`, `HttpSourceProbe`,
+  `NoSourceProbe` y `SourceProbeFactory`): si la cadena de fuentes trae más de
+  una URL, pide el manifiesto HLS o 1 KB del MP4 y descarta los enlaces que no
+  responden antes de entregarlos al player. Timeout de 6 s, caché de 60 s, sin
+  `Referer`, resultados en paralelo y, si ninguna URL responde, se entregan las
+  originales para que el player muestre el error real.
+- Warm-up de la sesión al cargar el plugin: `HDramaPlugin.load()` lanza en
+  segundo plano `WebFetcherFactory.warmUp()` (CoroutineScope con
+  `Dispatchers.IO`) para que el catálogo y la primera reproducción no esperen al
+  WebView.
+- Warm-up best-effort antes de `/api/`: `HdramaSourceClient` carga el inicio
+  (cacheado por `HdramaCatalogAdapter`) para que la cookie exista antes de
+  llamar a la API.
+- `loadLinksTimeoutMs = 90_000` en `HDramaProvider`: la primera reproducción de
+  una sesión puede incluir el challenge y la llamada a la API.
+- Suite JVM `HdramaHttpFetcherTest` con sesión y transporte falsos: cabeceras de
+  sesión, `/api/` como JSON same-origin, renovación ante 403, respaldo, fallo
+  rápido sin sesión y allowlist.
+- Suite JVM `SourceProbeTest` con transporte falso: descarte del enlace muerto,
+  orden de los vivos, devolución de todas si ninguna responde, atajo con una
+  sola fuente, estados de error intactos y fallo de red contado como enlace
+  caído.
+- Vector Stardust en `HdramaSourceCipherTest` y fixture
+  `hdrama-source-enc.json` actualizada al payload del 2026-11-12.
+- Caso de prueba del payload RSC actual en `HdramaHtmlParserTest`: el `bookId`
+  va seguido del array `episodes` y puede no ser numérico.
+
+### Cambiado
+
+- `HDrama/build.gradle.kts`: `version = 3` y descripción con reproducción y
+  descarga.
+- `PluginInfo.VERSION = 3`; `API_VERSION` sigue siendo `1`.
+- `WebFetcherFactory.create()` devuelve una única instancia por proceso:
+  `HdramaHttpFetcher` cuando hay contexto Android y `CloudstreamWebFetcher` en
+  entornos sin contexto. La sesión y las cookies se comparten entre el catálogo
+  y la API de fuentes.
+- La API `/api/episode-source` ya no se pide como XHR same-origin desde un
+  WebView: se pide por OkHttp con `Referer`, que es lo que exige el WAF.
+- `HdramaSourceClient` emite solo URLs directas, deduplicadas y sin cabeceras;
+  si `type` es desconocido, infiere HLS/MP4 por la extensión de la URL.
+- La sesión caducada ya no abre un WebView de respaldo sin sesión: se falla
+  rápido con HTTP 403 y el catálogo usa los sitemaps; el WebView de respaldo
+  solo se usa si había sesión y aun así falló la petición.
+- Documentación y metadatos actualizados a la versión 3 / release v1.2.0.
+
+### Corregido
+
+- ANR de CloudStream y "Skipping 3711 frames" en el emulador por abrir un
+  WebView nuevo en cada petición (v2 usaba `WebViewFetcher` como fetcher
+  principal).
+- Timeouts de 60 s y crash del renderer del WebView durante el challenge.
+- La reproducción no resolvía el HLS: ahora el enlace directo `M3U8` llega a
+  ExoPlayer sin cabeceras.
+- 403 de `/api/episode-source` con cookie válida por falta de `Referer`
+  same-origin.
+- La descarga de HLS desde CloudStream: con una media playlist sin
+  `#EXT-X-STREAM-INF`, `HlsPlaylistParser.parse` devuelve `null` y se descargan
+  los segmentos `.ts` concatenados en un MP4.
+- La documentación describía el `bookId` como numérico; el campo admite
+  números, ids hexadecimales, UUID y slugs, y se cubre con un caso nuevo del
+  payload RSC actual.
+
+### Eliminado
+
+- El proxy espejo `https://cdn.dramadizilerim.xyz/https/<URL>`: devuelve 451 sin
+  `Referer` y 403 con él, y el código lo construía mal (`/https/https://...`).
+- El WebView por petición como fetcher principal (`WebViewFetcher` queda solo
+  como respaldo).
+- Los reintentos por carga de WebView en la API y el backoff global de 10
+  minutos del catálogo.
+
+### Notas
+
+- `apiVersion = 1`; probado con CloudStream 4.9.1 / pre-release 2026-11-09.
+- El `bookId` puede ser numérico, hexadecimal, UUID o el slug de la serie; el
+  payload RSC actual lo coloca seguido del array `episodes`.
+- JDK Eclipse Adoptium Temurin 21.0.13+9, Gradle 8.12, AGP 8.7.3, Kotlin 2.3.0,
+  compileSdk 35, minSdk 21.
+- Total de pruebas de la suite: 117 pruebas unitarias en
+  18 suites.
+- Artefacto `.cs3`: 143.227 bytes (140 KB) / SHA-256
+  `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`.
+- Evidencia parcial en emulador Android 15 con CloudStream 4.9.1 y el plugin v3:
+  catálogo real (portada y banner "Encadenadas") y ficha con 64 episodios; la
+  reproducción y la descarga completas se cierran en la entrega.
+
 ## [v1.1.0] - 2026-11-11
 
 Versión 2 del plugin (el número de release es `v1.1.0`; el entero interno del
@@ -121,5 +229,6 @@ Versión 2 del plugin (el número de release es `v1.1.0`; el entero interno del
 - `apiVersion = 1`; CloudStream 4.9.1 / pre-release 2026-11-09.
 - JDK 21.0.13, Gradle 8.12, AGP 8.7.3, Kotlin 2.3.0, compileSdk 35.
 
+[v1.2.0]: https://github.com/GeorgesGil/HDramaCloudStream/compare/v1.1.0...v1.2.0
 [v1.1.0]: https://github.com/GeorgesGil/HDramaCloudStream/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://github.com/GeorgesGil/HDramaCloudStream/releases/tag/v1.0.0

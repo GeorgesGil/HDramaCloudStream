@@ -1,9 +1,9 @@
-# Instalación en Android (versión 2)
+# Instalación en Android (versión 3)
 
-Fecha: 2026-11-11. Procedimiento de instalación del plugin **v2** en Android
+Fecha: 2026-11-12. Procedimiento de instalación del plugin **v3** en Android
 con CloudStream 4.9.1. La instalación local del `.cs3` es la vía verificada;
 la instalación como repositorio depende de que el repositorio sea público y de
-que la rama `builds` tenga los artefactos de la versión 2.
+que la rama `builds` tenga los artefactos de la versión 3.
 
 El dispositivo objetivo final es un Samsung Galaxy Z Fold8 con Android 17/One
 UI 9; no se dispone de él en esta sesión, así que la verificación se hace en
@@ -83,13 +83,18 @@ Loaded plugin HDrama.cs3 successfully
    - Fuentes
    - Acceso a HDrama
 
-La primera petición puede tardar mientras el WebView resuelve el
-Managed Challenge en el WebView. Si la sesión no se resuelve, el catálogo cae
-a los sitemaps públicos y las fichas a la navegación (ver
+El plugin resuelve el Cloudflare Managed Challenge una sola vez: al cargar el
+plugin lanza un warm-up en segundo plano que sondea `CookieManager` hasta
+obtener `cf_clearance` (timeout 75 s en equipos lentos) y después todas las
+peticiones van por OkHttp. Si el challenge no se resuelve, el catálogo cae a
+los sitemaps públicos y las fichas a la navegación (ver
 [`08-limitaciones.md`](08-limitaciones.md)).
 
-Evidencia de la verificación en emulador de la versión 2:
-Verificación parcial en emulador Android 14 (AOSP API 34): plugin cargado, catálogo real y ficha con episodios; la reproducción HLS y los pósters dependen de los hosts del sitio.
+Evidencia de la verificación en emulador de la versión 3 (Android 15,
+CloudStream 4.9.1, plugin v3): plugin cargado, catálogo real con pósters,
+búsqueda real, ficha con 125 episodios, reproducción HLS (`Rendered first
+frame`) y descarga completa del episodio 1. Detalle en
+[`05-pruebas.md`](05-pruebas.md).
 
 ## 4. Navegar por el catálogo real
 
@@ -107,15 +112,38 @@ Verificación parcial en emulador Android 14 (AOSP API 34): plugin cargado, cat�
 
 1. Abrir una serie real y elegir un episodio de la lista.
 2. El plugin consulta `/api/episode-source/<bookId>/<serial>`, descifra el
-   payload y emite el HLS directo; además ofrece un espejo con `Referer` como
-   segunda opción.
-3. El reproductor de CloudStream (ExoPlayer) reproduce el HLS. Si el host
-   directo falla, el player prueba el espejo.
+   payload y comprueba las URLs de la cadena (`SourceProbe`): cuando hay más de
+   un enlace, pide el manifiesto HLS (o 1 KB del MP4) y descarta los que no
+   responden. Después emite solo las URLs directas vivas, sin proxy ni
+   cabeceras.
+3. El reproductor de CloudStream (ExoPlayer) reproduce el HLS. En la
+   verificación del 2026-11-12 se mostró `Rendered first frame` con un episodio
+   real.
 4. Si ninguna fuente responde, se muestra el estado "Video temporalmente no
    disponible" y se puede reintentar abriendo el episodio de nuevo (los tokens
    caducan).
 
-## 6. Usar el catálogo demo
+## 6. Descargar un episodio
+
+1. La primera vez, CloudStream pide elegir la carpeta de descargas (selector de
+   carpetas de Android). Se recomienda `Cloudstream3` y conceder el permiso de
+   acceso; solo se pregunta una vez.
+2. En la ficha, pulsar el icono de descarga de un episodio (o **Descargar
+   todo** para varios).
+3. CloudStream resuelve el enlace `M3U8` con `loadLinks`, descarga los
+   segmentos `.ts` y los concatena en un archivo con extensión `.mp4` dentro de
+   la carpeta elegida (`<tipo>/<serie>/Season N Episode M - <título>.mp4`).
+4. La descarga aparece en la pestaña **Descargas** de CloudStream y continúa en
+   segundo plano.
+
+Evidencia de la verificación del 2026-11-12: el episodio 1 de una serie real
+quedó en
+`/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4`
+con 26.160.200 bytes, la cola de descargas terminó y el archivo (MPEG-TS con
+extensión `.mp4`, comportamiento estándar de CloudStream para HLS) es
+reproducible. Detalle en [`05-pruebas.md`](05-pruebas.md).
+
+## 7. Usar el catálogo demo
 
 La sección **Acceso a HDrama** incluye:
 
@@ -126,7 +154,7 @@ La sección **Acceso a HDrama** incluye:
 
 También se puede buscar `prueba` para llegar a la serie demo.
 
-## 7. Importar una ficha de HDrama manualmente
+## 8. Importar una ficha de HDrama manualmente
 
 1. Copiar una URL del tipo
    `https://es.hdrama.net/series/<slug>`.
@@ -134,7 +162,7 @@ También se puede buscar `prueba` para llegar a la serie demo.
 3. Se abre la ficha real (si la sesión funciona) o una ficha de navegación con
    el botón de navegador.
 
-## 8. Instalar como repositorio de CloudStream
+## 9. Instalar como repositorio de CloudStream
 
 `repo.json` del repositorio apunta a la rama `builds`:
 
@@ -148,13 +176,13 @@ Para usarlo desde CloudStream (Ajustes > Extensiones > Añadir repositorio):
   Visibilidad actual del repositorio:
   **público**.
 - La rama `builds` debe contener `repo.json`, `plugins.json` y `HDrama.cs3` de
-  la versión 2. El workflow de GitHub Actions los publica en cada push a
+  la versión 3. El workflow de GitHub Actions los publica en cada push a
   `main`/release cuando Actions está habilitado; también se pueden copiar a
   mano.
 - Si el repositorio es privado o la rama `builds` no está actualizada, usar la
   instalación local del paso 2.
 
-## 9. Diagnóstico por ADB
+## 10. Diagnóstico por ADB
 
 ```powershell
 adb logcat -s PluginManager PluginInstance CS3ExoPlayer HDrama
@@ -162,11 +190,13 @@ adb logcat -s PluginManager PluginInstance CS3ExoPlayer HDrama
 
 - `Loaded plugin HDrama.cs3 successfully`: plugin cargado.
 - `Adding HDrama ... MainAPI`: proveedor registrado.
+- `Challenge resuelto; cookie de sesion actualizada`: sesión Cloudflare lista.
+- `Fuentes bookId=... serial=... resultado=N`: API de fuentes resuelta.
 - `Rendered first frame`: video reproducido.
 - `ErrorLoadingException`: mensaje de estado del episodio (temporalmente no
   disponible, navegador requerido, etc.).
 
-## 10. Galaxy Z Fold8
+## 11. Galaxy Z Fold8
 
 El plugin no modifica la UI ni el player de CloudStream. La rotación, el
 cambio de pantalla exterior/interior y la relación de aspecto los gestiona
