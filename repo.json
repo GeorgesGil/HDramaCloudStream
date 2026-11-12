@@ -1,0 +1,8 @@
+{
+    "name": "HDramaCloudStream",
+    "description": "Extension HDrama para CloudStream: catalogo, fichas, episodios, reproduccion HLS y descarga de video reales desde es.hdrama.net, con respaldo por sitemaps y modo demo.",
+    "manifestVersion": 1,
+    "pluginLists": [
+        "https://raw.githubusercontent.com/GeorgesGil/HDramaCloudStream/builds/plugins.json"
+    ]
+}
