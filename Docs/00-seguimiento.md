@@ -13,7 +13,7 @@
 | Release de referencia | v1.1.0 |
 | Rama principal | `main` |
 | Rama de artefactos | `builds` (publicada por el workflow) |
-| GitHub Actions | Habilitadas: workflow Build plugin (pruebas, .cs3, rama uilds y adjunto en releases) |
+| GitHub Actions | Habilitadas: workflow Build plugin (pruebas, .cs3, rama builds y adjunto en releases) |
 | Fecha de inicio | 2026-11-11 |
 | Zona horaria | America/Santo_Domingo |
 
@@ -28,7 +28,7 @@
 | 5. Corrección | Completado | Correcciones de v1 (URL de episodio, URL demo, MP4 403) y ajustes de la v2 |
 | 6. Entrega v1.0.0 | Completado | `.cs3` v1 en la rama `builds` y release v1.0.0 |
 | 7. Integración HTML real (v2) | Completado | Catálogo, búsqueda, fichas, episodios y HLS reales con respaldos |
-| 8. Entrega v1.1.0 | En preparación | `.cs3` v2, release v1.1.0 y rama `builds` (Release v1.1.0 publicada con HDrama.cs3 adjunto y rama uilds actualizada) |
+| 8. Entrega v1.1.0 | Completado | `.cs3` v2 (123.299 bytes, SHA-256 `7fbc…94e4`), release v1.1.0 con artefacto adjunto y rama `builds` publicada por CI |
 
 ## Bitácora
 
@@ -159,7 +159,7 @@
 - Evidencias de emulador de la v2:
   Verificación parcial en emulador Android 14 (AOSP API 34) con CloudStream 4.9.1: plugin cargado, catálogo real y ficha completa con 41 episodios; reproducción HLS pendiente de confirmar en hardware.
 - Release v1.1.0 y actualización de la rama `builds`:
-  Release v1.1.0 publicada con HDrama.cs3 adjunto y rama uilds actualizada.
+  Release v1.1.0 publicada con HDrama.cs3 adjunto y rama builds actualizada.
 
 ## Decisiones de implementación
 
@@ -175,14 +175,16 @@
    `Referer`.
 6. Las ocho secciones se alinean con las del sitio; "Nuevos" no se duplica
    porque la portada lo muestra como subconjunto de Novedades.
-7. La instalación verificada es local (`.cs3`/ADB); el workflow queda listo
-   para publicar en la rama `builds` cuando el repositorio sea público y
-   Actions esté habilitado.
+7. El repositorio es público y GitHub Actions está habilitado; el workflow
+   `Build plugin` ejecuta pruebas, compila el `.cs3`, actualiza la rama
+   `builds` y adjunta el artefacto en cada release. La instalación local
+   (`.cs3`/ADB) sigue disponible como alternativa.
 
 ## Próximos pasos
 
-- Completar la verificación end-to-end en emulador y adjuntar evidencias.
-- Publicar el `.cs3` v2 y la release v1.1.0, y actualizar la rama `builds`.
-- Decidir la visibilidad del repositorio y el estado de GitHub Actions.
-- Verificar en Galaxy Z Fold8 físico y en redes móviles.
+- Instalar desde `repo.json` público en un dispositivo limpio.
+- Confirmar la reproducción HLS en hardware físico: el emulador AOSP usado no
+  completa el challenge de la API en todos los casos.
+- Verificar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
+  móviles.
 - Mantener el parser y la clave de cifrado al día si el sitio cambia.

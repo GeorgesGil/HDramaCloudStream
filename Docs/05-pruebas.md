@@ -141,6 +141,12 @@ versión 2.
 | Respaldo sin sesión | Catálogo de sitemaps y ficha de navegación | Verificado: al fallar el challenge el catálogo se pobló con sitemaps y las fichas cayeron a navegación |
 | Demo | MP4 y HLS públicos en "Acceso a HDrama" | Implementado; verificación pendiente en esta sesión |
 
+Capturas de esta verificación:
+
+| Catálogo real (HTML) | Ficha real con episodios |
+|---|---|
+| ![Catálogo v2](../Docs/images/05-catalogo-real-v2.png) | ![Ficha v2](../Docs/images/06-ficha-real-v2.png) |
+
 Capturas históricas de la versión 1 en [`Docs/images/`](images/): no
 sustituyen a la evidencia de la versión 2.
 
