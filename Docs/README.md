@@ -1,26 +1,36 @@
 # Documentación del proyecto HDramaCloudStream
 
-Esta carpeta contiene el seguimiento vivo del proyecto: investigación, decisiones,
-avances por fase, resultados de compilación, pruebas, instalación, privacidad y
-limitaciones.
+Esta carpeta contiene el seguimiento vivo del proyecto: investigación,
+decisiones, avances por fase, resultados de compilación, pruebas, instalación,
+privacidad y limitaciones. La documentación está actualizada a la **versión 2**
+del plugin (integración real con el HTML de HDrama, sesión Cloudflare y
+reproducción HLS).
 
 ## Índice
 
 | Documento | Contenido |
 |---|---|
-| [00-seguimiento.md](00-seguimiento.md) | Bitácora, estado por fase, ramas, PR y próximos pasos |
+| [00-seguimiento.md](00-seguimiento.md) | Bitácora, estado por fase, decisiones y próximos pasos |
 | [01-investigacion-cloudstream.md](01-investigacion-cloudstream.md) | API de plugins, modelos, compilación `.cs3`, repositorios |
-| [02-investigacion-hdrama.md](02-investigacion-hdrama.md) | Estructura observable del sitio, robots, Cloudflare, aspectos legales |
-| [03-arquitectura.md](03-arquitectura.md) | Arquitectura, módulos y flujos (Fase 2) |
-| [04-compilacion.md](04-compilacion.md) | Entorno, comandos y resultados de build (Fase 4/5) |
-| [05-pruebas.md](05-pruebas.md) | Estrategia y resultados de pruebas (Fase 4/5) |
-| [06-instalacion.md](06-instalacion.md) | Instalación en Android y ADB (Fase 6) |
-| [07-privacidad.md](07-privacidad.md) | Política de privacidad y minimización de datos |
-| [08-limitaciones.md](08-limitaciones.md) | Limitaciones técnicas, funciones pendientes y riesgos |
+| [02-investigacion-hdrama.md](02-investigacion-hdrama.md) | Rutas, JSON-LD, DOM, API de fuentes y cifrado verificados |
+| [03-arquitectura.md](03-arquitectura.md) | Arquitectura v2, paquetes, rutas, cachés y flujos |
+| [04-compilacion.md](04-compilacion.md) | Entorno JDK/SDK, comandos y resultados de build v2 |
+| [05-pruebas.md](05-pruebas.md) | Suites, fixtures, plan de pruebas y verificación en emulador |
+| [06-instalacion.md](06-instalacion.md) | Instalación local y como repositorio, reproducción y demo |
+| [07-privacidad.md](07-privacidad.md) | Cookies de WebView, hosts de video, datos y minimización |
+| [08-limitaciones.md](08-limitaciones.md) | Limitaciones técnicas y funciones no cubiertas |
+| [09-informe-final.md](09-informe-final.md) | Informe de la versión 2 |
 
 ## Convenciones
 
 - Fechas en formato ISO 8601 (`YYYY-MM-DD`), zona `America/Santo_Domingo`.
-- Todo resultado técnico se registra con el comando ejecutado y su salida resumida.
-- No se documenta como "funcional" nada que no haya sido compilado o probado.
-- Los datos de prueba incluidos actualmente son sintéticos o de dominio público.
+- Todo resultado técnico se registra con el comando ejecutado y su salida
+  resumida.
+- Las cifras que dependen de la ejecución final (total de pruebas, tamaño y
+  SHA-256 del `.cs3`, visibilidad del repositorio o evidencias de emulador) se
+  marcan con un aviso `PENDIENTE` entre corchetes dobles hasta que el
+  responsable las confirme.
+- Las fixtures de prueba son recortes de páginas reales del sitio (estructura
+  conservada, menos de 40 KB); el catálogo demo es sintético y está etiquetado
+  como tal.
+- Los enlaces a otros documentos son relativos a esta carpeta.

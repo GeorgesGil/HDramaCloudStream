@@ -1,8 +1,7 @@
 name: Build plugin
 
-# GitHub Actions esta DESHABILITADO en este repositorio por decision del
-# propietario. Este workflow queda documentado y listo para una habilitacion
-# explicita; no se ha ejecutado.
+# Compila las pruebas, genera el .cs3 y publica los artefactos en la rama
+# `builds`. Requiere que GitHub Actions este habilitado en el repositorio.
 on:
   workflow_dispatch:
   push:
@@ -16,9 +15,16 @@ on:
       - "gradle/**"
       - "gradlew"
       - "gradlew.bat"
+      - "repo.json"
+  release:
+    types: [published]
 
 permissions:
   contents: write
+
+concurrency:
+  group: build-plugin-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -36,26 +42,71 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Test
-        run: ./gradlew :HDrama:testDebugUnitTest
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew :HDrama:testDebugUnitTest --console=plain
 
       - name: Build .cs3
-        run: ./gradlew :HDrama:make makePluginsJson
+        run: ./gradlew :HDrama:make makePluginsJson --console=plain
 
-      - name: Publish to builds branch
+      - name: Collect artifacts
         run: |
+          set -euo pipefail
           mkdir -p out
           cp HDrama/build/HDrama.cs3 out/
           cp build/plugins.json out/
           cp repo.json out/
+          {
+            echo "# Builds de HDramaCloudStream"
+            echo
+            echo "Generado automaticamente por GitHub Actions."
+            echo
+            echo "- Fecha (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Workflow: \`${GITHUB_WORKFLOW}\`"
+            echo
+            echo "Instalacion como repositorio de CloudStream:"
+            echo
+            echo '```'
+            echo "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/builds/repo.json"
+            echo '```'
+            echo
+            echo "O copia manualmente \`HDrama.cs3\` a \`/sdcard/Cloudstream3/plugins/\`."
+          } > out/BUILDS.md
+          sha256sum HDrama/build/HDrama.cs3 | tee out/HDrama.cs3.sha256
+          cat out/plugins.json
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HDrama-cs3
+          path: |
+            HDrama/build/HDrama.cs3
+            build/plugins.json
+            repo.json
+
+      - name: Publish to builds branch
+        run: |
+          set -euo pipefail
           cd out
-          git init
-          git checkout -b builds
+          git init -q
+          git checkout -q -b builds
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "build: HDrama $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git add -A
+          git commit -q -m "build: HDrama $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin builds
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attach .cs3 to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            HDrama/build/HDrama.cs3
+            build/plugins.json
+          fail_on_unmatched_files: false

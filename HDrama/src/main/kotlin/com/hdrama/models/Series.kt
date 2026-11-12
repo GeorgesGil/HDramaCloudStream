@@ -9,6 +9,8 @@ package com.hdrama.models
  * @property demo verdadero si el registro pertenece al catalogo sintetico.
  * @property browserOnly verdadero si solo puede abrirse en el navegador.
  * @property pageUrl URL original de la ficha (solo para navegacion).
+ * @property externalId identificador interno del sitio (por ejemplo `bookId`
+ *   de HDrama) cuando la ficha se obtuvo del HTML real.
  */
 data class Series(
     val id: String,
@@ -27,6 +29,7 @@ data class Series(
     val demo: Boolean = true,
     val browserOnly: Boolean = false,
     val pageUrl: String? = null,
+    val externalId: String? = null,
     val isNewThisWeek: Boolean = false,
     val recommended: Boolean = false,
 ) {

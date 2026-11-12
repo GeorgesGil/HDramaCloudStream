@@ -1,33 +1,40 @@
 package com.hdrama.parser
 
 /**
- * Contrato de selectores HTML para el adaptador HDrama.
+ * Contrato de selectores HTML validado contra el HTML real de HDrama
+ * (Next.js App Router, es.hdrama.net, 2026-11-11).
  *
- * IMPORTANTE: este contrato es una hipotesis de trabajo derivada de la
- * estructura publica observada y de las fixtures sinteticas. **No ha sido
- * validado contra el HTML real** porque el sitio responde con un Cloudflare
- * Managed Challenge (HTTP 403). Se requiere validar las fixtures con HTML real.
+ * Los selectores viven aqui para poder ajustarlos sin tocar la logica del
+ * parser. Los datos estructurados (JSON-LD) son la fuente principal; los
+ * selectores DOM son el respaldo.
  */
 data class ParserContract(
-    val seriesItem: String = "article.serie-card, article.serie, .serie-card, .item",
-    val title: String = ".serie-title, .title, h2, h3",
-    val link: String = "a[href]",
-    val poster: String = "img",
-    val synopsis: String = ".synopsis, .description, .plot",
-    val genres: String = ".genres a, .genres span, .genre",
-    val rating: String = ".rating, .score",
-    val episodeCount: String = ".episode-count, .episodes",
-    val originalTitle: String = ".original-title, .original",
-    val detailTitle: String = "h1, .serie-title",
-    val detailSynopsis: String = ".synopsis, .description, .plot",
-    val detailPoster: String = ".poster img, img.poster, img",
-    val detailGenres: String = ".genres a, .genres span, .genre, [itemprop=genre]",
-    val detailRating: String = ".rating, .score, [itemprop=ratingValue]",
-    val detailYear: String = ".year, [itemprop=datePublished]",
-    val episodeItem: String = ".episode-item, .episode, li.episode",
-    val episodeNumber: String = ".episode-number, .num, [data-number]",
-    val episodeTitle: String = ".episode-title, .title",
+    // Listados / tarjetas
+    val cardItem: String = "article",
+    val cardLink: String = "a[href*=\"/series/\"]",
+    val cardImage: String = "img[alt]",
+    val cardTitleAttr: String = "alt",
+
+    // Ficha de serie
+    val detailTitle: String = "h1",
+    val detailSynopsis: String = "details summary span",
+    val detailRating: String = "span.text-rating",
+    val detailPoster: String = "img[alt]",
+    val metadataList: String = "dl",
+    val metadataTerm: String = "dt",
+    val metadataValue: String = "dd",
+    val relatedHeading: String = "También te puede gustar",
+
+    // Episodios
+    val episodeItem: String = "a[data-serial][href*=\"/episode-\"]",
+    val episodeTitle: String = "span.block.truncate",
+    val episodeDuration: String = "span.tabular-nums, span.text-muted",
     val episodeLink: String = "a[href]",
-    val videoSource: String = "video source, source, [data-video]",
-    val subtitleTrack: String = "track[kind=subtitles], track",
+
+    // Directorios
+    val genreLink: String = "a[href*=\"/category/\"]",
+    val sourceLink: String = "a[href*=\"/source/\"]",
+
+    // JSON-LD
+    val jsonLd: String = "script[type=\"application/ld+json\"]",
 )

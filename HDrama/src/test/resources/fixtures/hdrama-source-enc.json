@@ -1,0 +1,34 @@
+{
+  "description": "Vectores enc->URL de la API de fuentes de HDrama (AES-256-GCM, IV 12B, tag 16B, clave del SPEC §6).",
+  "keyBase64": "QC6Ir2trghxRAyyyWZEOEFR4GgLhnfQ4A19I3QBlQkc=",
+  "vectors": [
+    {
+      "enc": "eomFYhl/QoSL80OE5HhxS+FbZi8+pbkKMO6jLeFpsu4SCOLeXdl/I1BDCx2qY6C9Gh+IurGmm2Y2snjl1cjiaN2UI+0wYLJxENFe3qBWnmAPmPM=",
+      "url": "https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8",
+      "type": "hls",
+      "real": true,
+      "origin": "capturado en tmp/raw/episode1.html"
+    },
+    {
+      "enc": "bT3GSNnwXK1IYks2ngTkIsoizAcpP8JGAZa1A1W2PYC4Qy31NwYduvhUiozJgIwere1FZV+1HHOBpyQ8pWdwp5w0eCdfZixaP6oxvGRgUeVgIun3aIuTahMf/28bhOd3kK7gycXENUtdMskQMFIGkvUt/P9g/fGg6lHnSq/GcnTjwaKLMcWV0VviBTd6DAJuNzvc1PaEYUe9CmZsCEV4IrhCc77ZQuQLRg==",
+      "url": "https://zshipricf.farsunpteltd.net/playlet-hls/1793611042_hls_47068.m3u8?verify=1794439458-FD%2FB%2BCMo07IwbHWsJxcH7ehNMa3LbbF1y4yChzNCLzs%3D",
+      "type": "hls",
+      "real": true,
+      "origin": "capturado en tmp/raw/episode1.html"
+    },
+    {
+      "enc": "fUWHIriZuFiuqBe2m191tUWWy5qtQm8spgZmSljVKlLAiDe8RfGg4ROUP/y17QvcDjispaUTSABjw+s/T24tXsMMHfpLOwqt+HqSHhYQAsmfvfw=",
+      "url": "https://pl.shortdizilab.com/v1/flickreels/23935680.m3u8",
+      "type": "hls",
+      "real": true,
+      "origin": "capturado en tmp/raw/episode1.html"
+    },
+    {
+      "enc": "AAECAwQFBgcICQoLEFGlklBikDwcfF0ELpVhuBqat4iBX80q0odDLD73Lqu2M2hpaei+v6GObi1DCCMJjVPj9ARMWXiQT0qe3pKFG5zLWgtVjg==",
+      "url": "https://pl.shortdizilab.com/v1/flickreels/23935680.mp4",
+      "type": "mp4",
+      "real": false,
+      "origin": "vector sintetico con IV fijo para probar el mapeo mp4"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 // Version entera obligatoria para plugins de CloudStream.
-version = 1
+version = 2
 
 cloudstream {
-    description = "HDrama para CloudStream: catalogo real desde sitemaps publicos, fichas de navegacion, importacion manual y modo demo con MP4/HLS."
+    description = "HDrama para CloudStream: catalogo, fichas, episodios y video HLS reales desde es.hdrama.net, con busqueda y respaldo por sitemaps."
     authors = listOf("GeorgesGil")
     // 0 = Down, 1 = Ok, 2 = Slow, 3 = Beta-only
     status = 3

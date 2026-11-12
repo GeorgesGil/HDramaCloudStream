@@ -78,6 +78,18 @@ object UrlUtils {
 
     fun isSeriesPage(value: String?): Boolean = extractSeriesSlug(value) != null
 
+    private val episodePathPattern = Regex("""/episode-(\d+)/?$""")
+
+    /** Numero mostrado del episodio (`1` para `/episode-1`); null si no lo es. */
+    fun extractEpisodeNumber(value: String?): Int? {
+        val canonical = normalizeHdramaUrl(value) ?: return null
+        val path = runCatching { URI(canonical).path }.getOrNull() ?: return null
+        return episodePathPattern.find(path)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    }
+
+    /** Pagina de episodio (`/series/<slug>/episode-<n>`). */
+    fun isEpisodePage(value: String?): Boolean = extractEpisodeNumber(value) != null
+
     fun demoSeriesUrl(id: String): String = "$DEMO_SCHEME_PREFIX$id"
 
     fun isDemoSeriesUrl(value: String?): Boolean = value?.trim()?.startsWith(DEMO_SCHEME_PREFIX) == true

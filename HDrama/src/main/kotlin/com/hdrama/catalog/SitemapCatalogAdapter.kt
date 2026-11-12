@@ -25,19 +25,17 @@ class SitemapCatalogAdapter(
     override suspend fun section(section: CatalogSection, page: Int): CatalogPage<Series> {
         val snapshot = client.loadSnapshot()
         return when (section) {
+            CatalogSection.DESTACADOS -> paginate(snapshot.trending.take(48).toSeries(), page)
             CatalogSection.NOVEDADES -> paginate(snapshot.newReleases.toSeries(), page)
             CatalogSection.MAS_VISTOS -> paginate(snapshot.trending.toSeries(), page)
-            CatalogSection.NUEVOS_SEMANA -> paginate(snapshot.fresh.toSeries(), page)
+            CatalogSection.TENDENCIAS -> paginate(snapshot.fresh.toSeries(), page)
             CatalogSection.CATALOGO -> paginate(
                 snapshot.allSeries.toSeries().distinctBy { it.id }
                     .sortedBy { TextNormalizer.normalize(it.title) },
                 page,
             )
             CatalogSection.GENEROS -> paginate(snapshot.genreCards(), page)
-            CatalogSection.RECOMENDACIONES -> paginate(
-                snapshot.trending.take(60).toSeries(),
-                page,
-            )
+            CatalogSection.FUENTES -> paginate(snapshot.sourceCards(), page)
             CatalogSection.ACCESO -> paginate(AccessCards.all(), page)
         }
     }
@@ -127,18 +125,17 @@ class SitemapCatalogAdapter(
         )
     }
 
-    private fun SitemapSnapshot.genreCards(): List<Series> = buildList {
-        add(
-            ManualHdramaImport.browserCardFromUrl(
-                "${UrlUtils.HDRA_BASE_URL}categories",
-                titleOverride = "Categorias y generos de HDrama",
-            )
+    private fun SitemapSnapshot.genreCards(): List<Series> = listOfNotNull(
+        ManualHdramaImport.browserCardFromUrl(
+            "${UrlUtils.HDRA_BASE_URL}categories",
+            titleOverride = "Categorias y generos de HDrama",
         )
-        add(
-            ManualHdramaImport.browserCardFromUrl(
-                "${UrlUtils.HDRA_BASE_URL}sources",
-                titleOverride = "Fuentes originales de HDrama",
-            )
+    )
+
+    private fun SitemapSnapshot.sourceCards(): List<Series> = listOfNotNull(
+        ManualHdramaImport.browserCardFromUrl(
+            "${UrlUtils.HDRA_BASE_URL}sources",
+            titleOverride = "Fuentes originales de HDrama",
         )
-    }.filterNotNull()
+    )
 }

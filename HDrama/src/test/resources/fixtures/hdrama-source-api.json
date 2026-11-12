@@ -1,0 +1,22 @@
+{
+  "descriptor": {
+    "source": "FlickReels",
+    "chain": [
+      {
+        "enc": "eomFYhl/QoSL80OE5HhxS+FbZi8+pbkKMO6jLeFpsu4SCOLeXdl/I1BDCx2qY6C9Gh+IurGmm2Y2snjl1cjiaN2UI+0wYLJxENFe3qBWnmAPmPM=",
+        "type": "hls",
+        "source": "FlickReels",
+        "refresh": false,
+        "refreshAfter": null
+      },
+      {
+        "enc": "bT3GSNnwXK1IYks2ngTkIsoizAcpP8JGAZa1A1W2PYC4Qy31NwYduvhUiozJgIwere1FZV+1HHOBpyQ8pWdwp5w0eCdfZixaP6oxvGRgUeVgIun3aIuTahMf/28bhOd3kK7gycXENUtdMskQMFIGkvUt/P9g/fGg6lHnSq/GcnTjwaKLMcWV0VviBTd6DAJuNzvc1PaEYUe9CmZsCEV4IrhCc77ZQuQLRg==",
+        "type": "hls",
+        "source": "FlickReels",
+        "refresh": true,
+        "refreshAfter": 1794444495
+      }
+    ],
+    "subtitle": null
+  }
+}

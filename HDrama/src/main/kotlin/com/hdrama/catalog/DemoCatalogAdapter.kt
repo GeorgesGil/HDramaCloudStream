@@ -34,12 +34,13 @@ class DemoCatalogAdapter(
 
     override suspend fun section(section: CatalogSection, page: Int): CatalogPage<Series> {
         val items = when (section) {
+            CatalogSection.DESTACADOS -> seriesOrder.filter { it.recommended }
             CatalogSection.NOVEDADES -> seriesOrder
             CatalogSection.MAS_VISTOS -> seriesOrder.sortedByDescending { it.rating ?: 0.0 }
-            CatalogSection.NUEVOS_SEMANA -> seriesOrder.filter { it.isNewThisWeek }
+            CatalogSection.TENDENCIAS -> seriesOrder.filter { it.isNewThisWeek }
             CatalogSection.CATALOGO -> seriesOrder
             CatalogSection.GENEROS -> seriesOrder.sortedBy { it.genres.firstOrNull() ?: "" }
-            CatalogSection.RECOMENDACIONES -> seriesOrder.filter { it.recommended }
+            CatalogSection.FUENTES -> accessCards().filter { it.browserOnly }
             CatalogSection.ACCESO -> accessCards()
         }
         return paginate(items.distinctBy { it.id }, page)
