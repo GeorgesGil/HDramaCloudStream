@@ -39,8 +39,20 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # Los runners de GitHub ya traen el SDK de Android en ANDROID_HOME.
+      # Se instalan solo los paquetes que necesita el proyecto y se aceptan
+      # licencias; no se usa android-actions/setup-android porque su version
+      # actual intenta instalar el paquete obsoleto "tools".
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?ANDROID_HOME no definido en el runner}"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" >/dev/null
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
