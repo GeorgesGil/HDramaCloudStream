@@ -66,9 +66,9 @@ try {
 
 ```powershell
 # Desde la raíz del repositorio
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
-$env:ANDROID_HOME="C:\Users\elbac\AppData\Local\Android\Sdk"
-$env:GRADLE_USER_HOME="C:\Users\elbac\Desktop\Georges\AI\HDramaCloudStream\.gradle-home"
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"  # o cualquier JDK 21
+$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
+$env:GRADLE_USER_HOME="$PWD\.gradle-home"  # opcional: caché dentro del repo
 
 # Pruebas unitarias JVM
 .\gradlew.bat :HDrama:testDebugUnitTest --console=plain
@@ -156,6 +156,8 @@ release.
 
 La ejecución remota requiere que **GitHub Actions esté habilitado** en el
 repositorio. Estado en la verificación local:
-Las GitHub Actions están habilitadas: el workflow \Build plugin\ ejecuta pruebas, compila el .cs3, publica la rama \uilds\ y adjunta el artefacto en cada release.
+Las GitHub Actions están habilitadas: el workflow `Build plugin` ejecuta
+pruebas, compila el `.cs3`, publica la rama `builds` y adjunta el artefacto en
+cada release.
 La compilación local con los comandos de este documento es la vía de entrega
 verificada.

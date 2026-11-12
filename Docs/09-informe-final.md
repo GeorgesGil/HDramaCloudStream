@@ -127,20 +127,22 @@ Total de pruebas de la suite: 98 pruebas unitarias en 16 suites.
 - D8 de AGP 8.7.3 emite advertencias de metadata Kotlin; no impiden compilar ni
   cargar el plugin.
 - No se ha probado en Galaxy Z Fold8 físico ni en redes móviles.
-- Repositorio: **público** desde la v1.1.0; la
-  instalación es local. GitHub Actions:
-  GitHub Actions habilitadas (workflow Build plugin).
+- Repositorio **público** desde la v1.1.0; GitHub Actions habilitadas
+  (workflow `Build plugin`).
 
 Detalle completo en [`08-limitaciones.md`](08-limitaciones.md).
 
 ## 8. Ubicación del archivo compilado
 
 ```text
-C:\Users\elbac\Desktop\Georges\AI\HDramaCloudStream\HDrama\build\HDrama.cs3
+HDrama/build/HDrama.cs3
 ```
 
 La copia de entrega se publica en la rama `builds` y en la release v1.1.0:
-Release v1.1.0 publicada con HDrama.cs3 adjunto y rama uilds (repo.json + plugins.json).
+
+- Release: <https://github.com/GeorgesGil/HDramaCloudStream/releases/tag/v1.1.0>
+- Repositorio de CloudStream:
+  `https://raw.githubusercontent.com/GeorgesGil/HDramaCloudStream/builds/repo.json`
 
 ## 9. Pasos para instalar en el Galaxy Z Fold8
 
@@ -159,14 +161,13 @@ Detalle en [`06-instalacion.md`](06-instalacion.md).
 
 ## 10. Mejoras recomendadas
 
-1. Añadir capturas y evidencias de la verificación v2 en emulador y hardware.
-2. Publicar la release v1.1.0 y actualizar la rama `builds` con los artefactos
-   de la versión 2.
-3. Decidir la visibilidad del repositorio y, si se desea CI, habilitar GitHub
-   Actions.
-4. Probar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
+1. Confirmar la reproducción HLS en hardware físico: el emulador AOSP usado no
+   completa el challenge de la API en todos los casos.
+2. Probar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
    móviles.
-5. Mantener actualizados los selectores del parser y los vectores de cifrado
+3. Instalar desde `repo.json` público en un dispositivo limpio y verificar la
+   actualización automática del plugin.
+4. Mantener actualizados los selectores del parser y los vectores de cifrado
    si el sitio cambia.
 6. Actualizar AGP/Kotlin juntos para eliminar las advertencias de metadata D8.
 7. Añadir pruebas instrumentadas de UI y de carga del plugin.

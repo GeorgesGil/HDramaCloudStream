@@ -29,11 +29,18 @@ plugin usa los sitemaps públicos y fichas de navegación como respaldo.
 
 ## Capturas
 
+Capturas de la verificación de la versión 2 (emulador Android 14 + CloudStream
+4.9.1):
+
+| Catálogo real (HTML) | Ficha real con episodios |
+|---|---|
+| ![Catálogo v2](Docs/images/05-catalogo-real-v2.png) | ![Ficha v2](Docs/images/06-ficha-real-v2.png) |
+
 Imágenes de la verificación de la versión 1.0.0 (el catálogo se construía
-entonces solo con sitemaps); la evidencia de la versión 2 se registra en
+entonces solo con sitemaps); el detalle de pruebas está en
 [`Docs/05-pruebas.md`](Docs/05-pruebas.md).
 
-| Catálogo | Ficha |
+| Catálogo v1 | Ficha v1 |
 |---|---|
 | ![Catálogo](Docs/images/01-catalogo-real-sitemap.png) | ![Ficha](Docs/images/02-ficha-real-navegador.png) |
 
@@ -62,9 +69,9 @@ desarrollo verificado se usa el JDK de Android Studio y una caché de Gradle
 dentro del workspace:
 
 ```powershell
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
-$env:ANDROID_HOME="C:\Users\elbac\AppData\Local\Android\Sdk"
-$env:GRADLE_USER_HOME="C:\Users\elbac\Desktop\Georges\AI\HDramaCloudStream\.gradle-home"
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"  # o cualquier JDK 21
+$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
+$env:GRADLE_USER_HOME="$PWD\.gradle-home"  # opcional: caché de Gradle dentro del repo
 
 .\gradlew.bat :HDrama:testDebugUnitTest --console=plain
 .\gradlew.bat :HDrama:make
