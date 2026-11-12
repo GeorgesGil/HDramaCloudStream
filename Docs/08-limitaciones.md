@@ -1,98 +1,124 @@
 # Limitaciones técnicas
 
-Fecha: 2026-11-11.
+Fecha: 2026-11-11. Aplica a la versión 2 del plugin.
 
-## 1. HTML de HDrama protegido por Cloudflare
+## 1. Dependencia de la sesión WebView y Cloudflare
 
-`GET https://es.hdrama.net/` responde:
+`GET https://es.hdrama.net/` responde con un **Cloudflare Managed Challenge**
+(HTTP 403 + `Cf-Mitigated: challenge`) cuando el cliente no tiene cookies
+válidas. El plugin lo resuelve con un WebView del sistema (`WebViewFetcher`), que abre
+un WebView y reutiliza las cookies obtenidas.
 
-```text
-HTTP/1.1 403 Forbidden
-Cf-Mitigated: challenge
-```
+Consecuencias:
 
-Es un **Cloudflare Managed Challenge** que exige JavaScript y cookies. Un
-cliente HTTP como el de CloudStream recibe 403.
+- La primera petición de una sesión puede tardar mientras se resuelve el
+  challenge y necesita WebView funcional en el dispositivo.
+- Si el challenge no se supera (WebView restringido, red bloqueada, cambio en
+  la configuración de Cloudflare), el catálogo real no está disponible: el
+  plugin cae a los sitemaps públicos y a las fichas de navegación.
+- La API `/api/episode-source/...` también exige esas cookies; sin sesión
+  devuelve HTTP 403 con `{"error":"forbidden"}` y el episodio se muestra como
+  temporalmente no disponible.
 
-**Consecuencia:** no se pueden obtener automáticamente:
+## 2. Caducidad de los tokens de video
 
-- portadas,
-- sinopsis,
-- géneros,
-- valoración,
-- número real de episodios,
-- enlaces de video,
-- subtítulos.
+La API devuelve una cadena de fuentes con `refresh` y `refreshAfter`. Las URLs
+HLS llevan tokens (`verify=...`) que caducan:
 
-## 2. Catálogo real limitado al sitemap
+- Las fuentes se resuelven en el momento de reproducir y se cachean como
+  máximo 5 minutos.
+- Si el player tarda o se reanuda una reproducción antigua, el token puede
+  haber caducado: hay que volver a abrir el episodio para resolver una fuente
+  nueva.
+- `refresh=1` fuerza una fuente nueva; el plugin no precachea enlaces de video a
+  largo plazo.
 
-Sí se implementó un catálogo real con los sitemaps públicos:
+## 3. Hosts y proxy de terceros
 
-- Novedades (`/sitemaps/new-es`, 222 entradas en la comprobación).
-- Más vistos (`/sitemaps/trending-es`, 500 entradas).
-- Nuevos esta semana (`/sitemaps/fresh-es`, 500 entradas).
-- Catálogo general (unión deduplicada).
-- Búsqueda por título derivado del `slug`.
+Las URLs descifradas apuntan a hosts externos al sitio, no controlados por este
+proyecto:
 
-Los títulos se derivan del slug, por lo que pueden aparecer sin tildes,
-concatenados o con sufijos numéricos. No son metadatos oficiales de la ficha.
+- `zshipricf.farsunpteltd.net`, `pl.shortdizilab.com` y similares pueden
+  devolver 404, 403 por geolocalización o dejar de existir.
+- La URL directa responde 200 **sin** cabecera `Referer` y 403 **con**
+  `Referer: https://es.hdrama.net/`; por eso se emite sin headers.
+- El proxy espejo `cdn.dramadizilerim.xyz/https/<URL>` responde 200 con
+  `Referer: https://es.hdrama.net/` y 451 sin él; es un servicio de terceros y
+  puede fallar o cambiar de comportamiento.
+- Las entradas de `pl.shortdizilab.com/v1/flickreels/...` devolvieron 404 en
+  las comprobaciones. Se emiten igualmente porque el player prueba la cadena de
+  enlaces, pero no hay garantía de que funcionen.
 
-## 3. Rutas de API en la versión actual
+## 4. El sitio cambia sin aviso
 
-La versión actual obtiene el catálogo de los sitemaps y no utiliza rutas bajo `/api/`.
+HDrama es un objetivo en movimiento: es una aplicación Next.js con rutas,
+selectores y payloads internos que pueden cambiar en cualquier despliegue. En
+particular:
 
-## 4. Repositorio privado y Actions deshabilitado
+- La clave AES-256-GCM del payload `/api/episode-source` va embebida en el
+  JavaScript del sitio; si cambia, el descifrado deja de funcionar hasta
+  actualizar el plugin.
+- Los selectores del DOM y el formato del payload RSC (`bookId`, `slug`) pueden
+  cambiar; el parser es tolerante y deja los campos ausentes en `null`, pero
+  una ficha sin título, episodios o `bookId` no se puede reproducir.
+- La estructura de `chain` de la API puede variar (más fuentes, `type` nuevos,
+  subtítulos). El cliente mapea `hls` y `mp4` y descarta lo que no reconoce sin
+  romper el resto.
 
-- `raw.githubusercontent.com` no sirve archivos de repositorios privados sin
-  token; CloudStream no autentica.
-- Por eso `repo.json`/`plugins.json` no funcionan como repositorio instalable
-  mientras el repo sea privado.
-- La entrega es un `.cs3` local instalable por archivo/ADB.
-- El workflow está incluido pero **no se ejecutó**; Actions está deshabilitado
-  por decisión del propietario.
+El respaldo por sitemaps mantiene títulos y navegación, pero no aporta
+portadas, sinopsis, géneros, nota ni episodios: en ese modo la ficha es de
+navegación.
 
-## 5. Reproducción de contenido real
+## 5. Repositorio e instalación por URL
 
-- No hay enlaces de video de HDrama. No se extraen iframes, tokens, firmas ni
-  DRM.
-- El modo real ofrece navegación al sitio original.
-- El modo demo reproduce MP4/HLS públicos para verificar el reproductor.
-- El caso `BrowserOnly` lanza un mensaje claro y remite al botón de navegador;
-  no se emite un enlace de video falso.
+- El repositorio es **público** desde la v1.1.0. Un
+  repositorio privado no sirve `repo.json`/`plugins.json` a CloudStream, porque
+  la app no envía credenciales de GitHub.
+- La instalación verificada es local: copiar `HDrama.cs3` a
+  `/sdcard/Cloudstream3/plugins/` o usar ADB.
+- El workflow de GitHub Actions está preparado para publicar en la rama
+  `builds`, pero su ejecución remota requiere Actions habilitado
+  (habilitadas en la v1.1.0).
 
-## 6. HLS
+## 6. Hardware físico no disponible
 
-El parser y el resolver emiten `ExtractorLinkType.M3U8` y las pruebas cubren
-la clasificación. No se confirmó la reproducción HLS completa en el player
-durante la sesión (sí se confirmó MP4 1080p con `Rendered first frame`).
+- No se dispone de un Galaxy Z Fold8 físico. La rotación, el plegado y la
+  relación de aspecto 9:16 los gestiona CloudStream/ExoPlayer; el plugin no
+  impone orientación ni recorta el video, pero no se ha verificado en ese
+  hardware.
+- La reproducción HLS real de HDrama (manifest y segmentos servidos por los
+  hosts de terceros) se valida en el laboratorio Android; la verificación en
+  hardware físico y en redes móviles queda para una sesión con dispositivo.
+- Las pruebas instrumentadas de UI (Espresso/UIAutomator) no están
+  automatizadas.
 
-## 7. Pantallas plegables
+## 7. Reproducción y fuentes
 
-No se dispone de Galaxy Z Fold8 físico. La app/ExoPlayer gestionan rotación y
-relación de aspecto; el plugin no impone orientación ni recorta. La verificación
-en hardware queda pendiente.
+- No hay DRM en el sitio: solo HLS/MP4. El plugin no implementa DRM ni
+  descarga protegida.
+- La cadena de fuentes no aporta metadatos de calidad; los enlaces se emiten
+  como `Auto` y el player elige la variante del manifest HLS.
+- El modelo soporta pistas de subtítulos si una fuente las aporta, pero la API
+  de fuentes de HDrama no las emite actualmente: `descriptor.subtitle` se
+  ignora de forma defensiva (llegó `null` en la muestra).
+- La descarga desde CloudStream depende de que el host entregue el manifest y
+  los segmentos; no se ha verificado el flujo de descarga completo.
 
 ## 8. API de CloudStream
 
 La compilación usa la API `pre-release` actual (2026-11-09) y `apiVersion = 1`.
 Si CloudStream cambia `MainAPI`, los modelos o el empaquetado `.cs3`, el plugin
-puede requerir actualización. Las pruebas de compatibilidad fijan la versión
-actual, no garantizan versiones futuras.
+puede requerir una actualización. Las pruebas fijan la versión actual; no
+garantizan compatibilidad con versiones futuras.
 
 ## 9. D8 / Kotlin
 
-D8 de AGP 8.7.3 emite advertencias de metadata al procesar Kotlin 2.3.0. El
-DEX se genera y carga; se recomienda actualizar AGP/Kotlin de forma conjunta en
-el futuro.
+D8 de AGP 8.7.3 emite advertencias de metadata al procesar Kotlin 2.3.0. El DEX
+se genera y el plugin carga correctamente; la advertencia se eliminaría
+actualizando AGP y Kotlin de forma conjunta.
 
-## 10. Funciones no implementadas
+## 10. Funciones que aporta CloudStream
 
-- Favoritos/historial: los aporta CloudStream, no el plugin.
-- Subtítulos: se soportan si un `MediaSource` los aporta, pero no hay fuente
-  real disponible.
-- Selección de calidad: se soporta con varios enlaces; el demo solo tiene una
-  calidad por episodio.
-- Descarga: CloudStream puede descargar MP4/HLS si el enlace es accesible; no se
-  probó.
-- Reproducción vertical 9:16: depende del player; no se dispone de un video
-  9:16 de prueba.
+Favoritos, historial, continuar viendo, selección de reproductor, pantalla
+completa y descarga los gestiona CloudStream; el plugin solo entrega los
+enlaces. El plugin no implementa UI ni player propios.

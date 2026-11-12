@@ -1,143 +1,163 @@
-# Pruebas (Fase 4/5)
+# Pruebas (versión 2)
 
 Fecha: 2026-11-11.
 
-## Resumen
+## 1. Resumen
 
-| Métrica | Resultado |
+| Métrica | Valor |
 |---|---|
 | Suite | `:HDrama:testDebugUnitTest` |
-| Total de pruebas | **61** |
-| Fallos | **0** |
-| Errores | **0** |
-| Resultado | `BUILD SUCCESSFUL` |
+| Total de pruebas | 98 pruebas unitarias en 16 suites |
+| Fallos | 0 (criterio de aceptación: suite en verde) |
+| Entorno | JVM, sin red ni emulador |
+| Integración opcional | `SitemapLiveTest` con `HDRAMA_INTEGRATION=1` |
 
-La cifra se obtuvo sumando `testsuite.tests` de los XML generados en
+La suite se ejecuta con:
+
+```powershell
+.\gradlew.bat :HDrama:testDebugUnitTest --console=plain
+```
+
+El total se obtiene sumando `testsuite.tests` de los XML generados en
 `HDrama/build/test-results/testDebugUnitTest/`.
 
-## Cobertura funcional
+## 2. Suites y cobertura
 
-### 1. Compilación y carga del plugin
+### 2.1 Parser HTML real (`com.hdrama.parser`)
 
-- `:HDrama:make` genera `HDrama.cs3` con `manifest.json` y `classes.dex`.
-- El manifest apunta a `com.hdrama.HDramaPlugin` y versión `1`.
-- Verificado en emulador Android 15 (API 35) con CloudStream 4.9.1:
-  - `PluginManager: Loaded plugin HDrama.cs3 successfully`
-  - `PluginInstance: Adding HDrama (https://es.hdrama.net/) MainAPI`
-  - El proveedor HDrama aparece en el selector de proveedores.
+`HdramaHtmlParserTest` usa fixtures recortadas de páginas reales del sitio:
 
-### 2. Registro y metadatos
+- **Ficha completa**: título, sinopsis, nota `7.4` (`span.text-rating`),
+  géneros, póster, `bookId` (`15531` en el ejemplo) extraído del payload RSC,
+  recuento declarado `numberOfEpisodes=75`, lista de episodios del recorte con
+  orden por número mostrado, duraciones `mm:ss` convertidas a segundos,
+  `externalId=bookId:serial` y relacionadas sin la propia serie.
+- **Listado/categoría**: JSON-LD `CollectionPage` con 24 elementos, URL
+  canónica y normalización de hosts.
+- **Búsqueda**: extracción de título, póster, nota y número de episodios desde
+  las tarjetas `article`.
+- **Portada**: `parseHomeSection(html, "Destacados", url)` con la sección DOM.
+- **Géneros y fuentes**: `parseGenreCards` y `parseSourceCards` sobre
+  `/categories` y `/sources`.
+- **Robustez**: HTML vacío, truncado o inválido devuelve `null`/lista vacía sin
+  lanzar; campos ausentes quedan en `null`.
 
-- `PluginInfoTest` comprueba nombre, versión, `apiVersion`, clase y URL.
-- El proveedor declara `lang = "es"`, `TvType.TvSeries` y `TvType.AsianDrama`.
+### 2.2 Cifrado y fuentes (`com.hdrama.sources`)
 
-### 3. Metadatos con fixtures locales
+- `HdramaSourceCipherTest`: descifra los vectores reales de
+  `hdrama-source-enc.json` (incluidos `mqDHwriF...` →
+  `pl.shortdizilab.com/...` y `ueB4Z517...` →
+  `zshipricf.farsunpteltd.net/...`) y un vector MP4 sintético; entrada vacía,
+  base64 inválido, payload corto, ciphertext manipulado o tag truncado
+  devuelven `null`; también acepta base64 sin relleno.
+- `HdramaSourceClientTest` con `WebFetcher` falso y fixtures
+  `hdrama-source-api.json` / `hdrama-source-enc.json`:
+  - parseo de `descriptor.chain` con dos entradas `hls`;
+  - URLs directas primero y proxy espejo
+    `https://cdn.dramadizilerim.xyz/https/<URL>` con `Referer`;
+  - deduplicación por URL;
+  - mapeo de `type` `hls`/`mp4`;
+  - respuesta sin `descriptor`, JSON inválido o error de red →
+    `MediaSource.Unavailable` con motivo (sin lanzar);
+  - `subtitle` `null` no rompe el parseo (la respuesta se procesa igual).
 
-- `HdramaHtmlParserTest` usa `hdrama-series.html`, `hdrama-detail.html` y
-  `hdrama-episodes.html`.
-- Comprueba título, título original, sinopsis, géneros, valoración, año,
-  portada, número de episodios y URL canónica.
-- Los selectores son un contrato **no validado** contra el HTML real; ver
-  `Docs/08-limitaciones.md`.
+### 2.3 Red y allowlist (`com.hdrama.network`)
 
-### 4. Normalización de URLs
+- `WebFetcherAllowlistTest`: `HdramaFetchAllowlist` acepta solo URLs https de
+  `es.hdrama.net` (normalizando `www` y `http`), lanza `WebFetchException` con
+  `NO_HTTP_CODE` para URLs ajenas y no registra datos sensibles.
+- `WebViewFetcher` no se prueba en JVM (depende del WebView de Android); `CloudstreamWebFetcher` tampoco (depende de `app`). La verificación es manual en emulador.
+  Android): se mantiene fino y delega allowlist, errores HTTP y mensajes en
+  clases testeables.
+- `SafeHttpClientTest`: fallo, fallo, éxito → 3 intentos y backoff
+  `[250, 500]` ms; fallo persistente → `HttpOutcome.Failure`; dominio no
+  permitido → `Blocked` sin abrir conexión.
+- `SitemapParserTest` y `SitemapCatalogAdapterTest`: índice, `urlset`,
+  secciones, paginación y fichas de navegación con datos de respaldo.
+- `SitemapLiveTest`: prueba opcional con red real (`HDRAMA_INTEGRATION=1`).
 
-- `UrlUtilsTest`: esquema, host, `www`, barras finales, consultas, rechazo de
-  dominios ajenos, `ftp`/`javascript`, extracción de slug, redacción de logs.
-- Recuperación de URLs demo cuando CloudStream antepone `mainUrl`.
+### 2.4 Catálogo y respaldos (`com.hdrama.catalog`)
 
-### 5. Campos ausentes
+- `HdramaCatalogAdapterTest` con `WebFetcher` falso (sin red):
+  - sección Novedades construida desde el JSON-LD real;
+  - búsqueda con tarjetas `article`;
+  - ficha con nota `7.4`, géneros, póster, `bookId=15531`, episodios con
+    `externalId` y duración, y relacionadas sin la propia serie;
+  - `resolve` descifra el HLS de la API de fuentes y produce `Playable`;
+  - si el HTML falla, la ficha queda como navegación (`browserOnly`);
+  - `/categories` se abre como página navegable con recomendaciones.
+- `DemoCatalogAdapterTest`: paginación, búsqueda sin acentos, series demo,
+  episodios MP4/HLS y estados.
+- `SitemapCatalogAdapterTest`: secciones y fichas de navegación del respaldo.
 
-- Artículo sin portada, sin sinopsis, sin rating o sin título.
-- Duplicados descartados por `id`.
-- Valoración con coma decimal (`7,9`) convertida a `7.9`.
+### 2.5 Reproducción y estados (`com.hdrama.player`)
 
-### 6. Orden numérico de episodios
+- `LinkResolverTest`: deduplicación por `tipo|URL|calidad`, orden por calidad
+  descendente, `Playable`/`Browser`/`Failure` y `PlaybackStatus` con mensajes
+  en español.
 
-- Fixture con episodios 10, 2, 1 y un duplicado.
-- Resultado: `[1, 2, 10]`, sin duplicados.
-- `EpisodeOrdering` y `EpisodeId` probados por separado.
+### 2.6 Utilidades y plugin
 
-### 7. Enlaces duplicados
+- `TextNormalizerTest`: `Corazón` = `corazon`, `Señor` = `senor`, `Jardín` =
+  `jardin`, mayúsculas y espacios.
+- `UrlUtilsTest`: normalización de esquema/host, rechazo de dominios ajenos,
+  `ftp`/`javascript`, extracción de slug, recuperación del esquema demo.
+- `EpisodeIdTest`: codificación `hdrama-demo://episode/<slug>/<n>`, parseo y
+  orden.
+- `PluginInfoTest`: nombre, `VERSION = 2`, `API_VERSION = 1`, clase
+  `com.hdrama.HDramaPlugin` y `MAIN_URL`.
 
-- `LinkResolverTest` verifica deduplicación por `tipo|URL|calidad`.
-- Verifica orden por calidad descendente (1080 > 720 > 480).
+## 3. Fixtures
 
-### 8. Paginación
+| Fixture | Origen | Uso |
+|---|---|---|
+| `hdrama-real-detail.html` | Recorte de `tmp/raw/detail-la-novia.html` | Ficha, episodios, `bookId` |
+| `hdrama-real-collection.html` | Recorte de `tmp/raw/series-list.html` | Listado JSON-LD |
+| `hdrama-real-search.html` | Recorte de `tmp/raw/search.html` | Búsqueda por tarjetas |
+| `hdrama-real-home.html` | Recorte de `tmp/raw/home.html` | Portada y secciones |
+| `hdrama-real-directories.html` | Recorte de `tmp/raw/` (directorios) | Géneros y fuentes |
+| `hdrama-source-api.json` | Respuesta real de `/api/episode-source` | Cliente de fuentes |
+| `hdrama-source-enc.json` | Pares `enc` → URL esperada | Cifrado AES-GCM |
+| `sitemap-index.xml`, `sitemap-new-es.xml` | Respuestas reales recortadas | Respaldo por sitemaps |
 
-- `DemoCatalogAdapter` con páginas de 12 y de 2 elementos.
-- `SitemapCatalogAdapter` con páginas de 1 elemento y `hasNext`.
-- Se comprueba que no se repiten elementos entre páginas.
+Los recortes conservan la estructura real (JSON-LD, atributos y clases) y pesan
+menos de 40 KB cada uno. `tmp/` no se versiona.
 
-### 9. Unicode y español
+## 4. Verificación manual en emulador
 
-- `TextNormalizer`: `Corazón` == `corazon`, `Señor` == `senor`,
-  `Jardín` == `jardin`, mayúsculas y espacios múltiples.
-- Títulos con acentos en fixtures y catálogo demo.
+Dispositivo previsto: emulador x86_64, Android con CloudStream 4.9.1.
+La tabla se completa con la evidencia de la sesión de laboratorio de la
+versión 2.
 
-### 10. Errores de red
+| Paso | Resultado esperado | Evidencia |
+|---|---|---|
+| Instalar CloudStream y `HDrama.cs3` | Plugin cargado y proveedor visible | Verificado en emulador Android 14 (AOSP API 34) con CloudStream 4.9.1: `Loaded plugin HDrama.cs3 successfully` y proveedor HDrama registrado |
+| Abrir HDrama | Secciones Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros, Fuentes y Acceso | Verificado el catálogo real; las secciones que no cabían en pantalla se validan por pruebas JVM con fixtures reales |
+| Destacados | Portada real con títulos, pósters y notas | Verificado: portada con títulos reales y notas (p. ej. 8.8, 9.5, 8.1) |
+| Novedades / Más vistos / Tendencias / Catálogo | Paginación real (24 por página) | Implementado; paginación cubierta por pruebas JVM, verificación visual pendiente |
+| Búsqueda | Resultados reales del sitio | Implementada y cubierta con fixtures reales; verificación visual pendiente |
+| Ficha de serie | Portada, sinopsis, géneros, nota y lista completa de episodios | Verificado: título, sinopsis, `8.4/10.0`, género, póster y `41 Episodes` desde el HTML real |
+| Reproducción de episodio | HLS real con `Rendered first frame` | Pendiente de confirmar en hardware físico; el descifrado AES-GCM y el parseo de la API se validan con vectores reales en JVM |
+| Respaldo sin sesión | Catálogo de sitemaps y ficha de navegación | Verificado: al fallar el challenge el catálogo se pobló con sitemaps y las fichas cayeron a navegación |
+| Demo | MP4 y HLS públicos en "Acceso a HDrama" | Implementado; verificación pendiente en esta sesión |
 
-- `SafeHttpClientTest` con transporte falso:
-  - fallo, fallo, éxito -> 3 intentos y backoff `[250, 500]` ms.
-  - fallo persistente -> `HttpOutcome.Failure` con 3 intentos.
-  - dominio no permitido -> `Blocked` sin abrir conexión.
+Capturas históricas de la versión 1 en [`Docs/images/`](images/): no
+sustituyen a la evidencia de la versión 2.
 
-### 11. Reproductores no compatibles
+## 5. Pruebas no ejecutadas
 
-- `LinkResolution.Failure` para fuente no disponible, no autorizada o URL
-  inválida.
-- `PlaybackStatus` diferencia `COMPATIBLE`, `TEMPORARILY_UNAVAILABLE`,
-  `UNSUPPORTED_SOURCE`, `BROWSER_REQUIRED`, `UNAUTHORIZED`.
+- Reproducción en hardware físico (Galaxy Z Fold8) y en redes móviles.
+- Descarga completa desde el player (manifest y segmentos) en dispositivos
+  reales.
+- Pruebas instrumentadas de UI (Espresso/UIAutomator).
+- Pruebas de estrés con el sitio cambiando selectores o la clave de cifrado
+  (se cubren con fixtures y casos de error).
 
-### 12. Compatibilidad de versión
+## 6. Criterios de aceptación
 
-- `PluginInfoTest` fija `VERSION=1` y `API_VERSION=1`.
-- El `.cs3` se inspeccionó manualmente para confirmar `manifest.json`.
-
-### 13. Adaptador HTML pendiente
-
-- `HdramaCatalogAdapterTest` comprueba que catálogo y búsqueda informan que
-  están sin implementar, y que la importación manual funciona sin descargar HTML.
-
-### 14. Sitemaps reales
-
-- `SitemapParserTest` con XML de índice y `urlset`.
-- `SitemapCatalogAdapterTest` con una fuente falsa: secciones, búsqueda,
-  paginación, ficha navegable y deduplicación.
-- `SitemapLiveTest` (opcional, `HDRAMA_INTEGRATION=1`) descargó los sitemaps
-  reales y confirmó que `new-es`, `trending-es` y `fresh-es` no están vacíos.
-  **Ejecutada y superada** el 2026-11-11.
-
-## Verificación manual en emulador
-
-Dispositivo: emulador x86_64, Android 15 (API 35), CloudStream 4.9.1.
-
-| Paso | Resultado |
-|---|---|
-| Instalar CloudStream | OK |
-| Copiar `HDrama.cs3` a `/sdcard/Cloudstream3/plugins/` | OK |
-| Cargar plugin al iniciar | OK |
-| Proveedor HDrama en el selector | OK |
-| Catálogo real (Novedades/Más vistos) | OK, títulos reales del sitemap |
-| Ficha de serie real | OK, metadatos mínimos + navegador |
-| Botón de navegador | Abre Chrome con la URL de HDrama |
-| Tarjeta demo "Prueba de reproducción" | OK, 2 episodios |
-| Episodio MP4 1080p | OK, `Rendered first frame` |
-| Relación de aspecto | Letterboxing correcto, sin estiramiento |
-| Episodio HLS | Implementado y probado a nivel de resolución; no se confirmó reproducción en player por tiempo de sesión |
-
-Capturas en [`Docs/images/`](images/):
-
-- `01-catalogo-real-sitemap.png`
-- `02-ficha-real-navegador.png`
-- `03-ficha-demo-episodios.png`
-- `04-reproduccion-mp4.png`
-- `05-ficha-real-boton-navegador.png`
-
-## Pruebas no ejecutadas
-
-- Galaxy Z Fold8 físico / Android 17 / One UI 9.
-- Reproducción HLS en ExoPlayer (solo se validó la emisión del enlace y el
-  parser).
-- Pruebas instrumentadas (Espresso/UIAutomator) automatizadas.
-- Pruebas contra HTML real de HDrama (bloqueado por Cloudflare).
+1. `:HDrama:testDebugUnitTest` en verde, sin red.
+2. `:HDrama:make` y `makePluginsJson` generan los artefactos.
+3. El plugin carga en CloudStream 4.9.1 y muestra las ocho secciones.
+4. Una ficha real muestra metadatos y episodios; un episodio real emite HLS.
+5. Sin sesión de Cloudflare, el plugin sigue mostrando catálogo y fichas de
+   navegación.

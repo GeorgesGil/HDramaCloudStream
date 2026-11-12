@@ -82,9 +82,15 @@ subprojects {
         cloudstream("com.lagradost:cloudstream3:pre-release")
         add("implementation", "org.jsoup:jsoup:1.18.3")
         add("implementation", "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+        // Libreria HTTP que usa la propia app (app.get/NiceResponse) y que
+        // aporta okhttp3, necesario para los interceptores de Cloudflare.
+        add("implementation", "com.github.Blatzar:NiceHttp:0.4.11")
 
         add("testImplementation", "junit:junit:4.13.2")
         add("testImplementation", "org.jetbrains.kotlin:kotlin-test:2.3.0")
+        // En Android org.json lo aporta el framework; en pruebas JVM hace falta
+        // una implementacion real (el android.jar de pruebas devuelve defaults).
+        add("testImplementation", "org.json:json:20240303")
     }
 }
 

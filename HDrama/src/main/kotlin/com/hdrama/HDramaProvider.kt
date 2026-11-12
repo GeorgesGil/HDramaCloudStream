@@ -36,11 +36,10 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 /**
  * Proveedor CloudStream de HDrama.
  *
- * Estado actual:
- * - Catalogo demo local completamente funcional (datos sinteticos y videos
- *   publicos de prueba).
- * - Navegacion al sitio original e importacion manual de enlaces.
- * - El adaptador de fichas HTML todavia esta en desarrollo.
+ * Fuente principal: HTML real de `es.hdrama.net` (JSON-LD, fichas, episodios y
+ * API de fuentes HLS) mediante una sesion con Cloudflare resuelto por WebView.
+ * Respaldo: sitemaps publicos y fichas de navegacion; el catalogo demo sigue
+ * disponible desde la seccion "Acceso a HDrama" para diagnostico del player.
  */
 class HDramaProvider(
     private val repository: CatalogRepository = CatalogRepository(),
@@ -54,14 +53,17 @@ class HDramaProvider(
     override val hasChromecastSupport = false
     override val hasDownloadSupport = true
 
+    // El HTML de HDrama exige una sesion de Cloudflare: las secciones se piden
+    // en serie para no abrir varios WebView a la vez y se declara el uso de
+    // WebView para que CloudStream lo tenga en cuenta.
+    override var sequentialMainPage = true
+    override var sequentialMainPageDelay = 250L
+    override val usesWebView = true
+
     override val mainPage = mainPageOf(
-        CatalogSection.NOVEDADES.key to CatalogSection.NOVEDADES.displayName,
-        CatalogSection.MAS_VISTOS.key to CatalogSection.MAS_VISTOS.displayName,
-        CatalogSection.NUEVOS_SEMANA.key to CatalogSection.NUEVOS_SEMANA.displayName,
-        CatalogSection.CATALOGO.key to CatalogSection.CATALOGO.displayName,
-        CatalogSection.GENEROS.key to CatalogSection.GENEROS.displayName,
-        CatalogSection.RECOMENDACIONES.key to CatalogSection.RECOMENDACIONES.displayName,
-        CatalogSection.ACCESO.key to CatalogSection.ACCESO.displayName,
+        *CatalogSection.entries
+            .map { it.key to it.displayName }
+            .toTypedArray(),
     )
 
     override suspend fun getMainPage(
@@ -82,9 +84,11 @@ class HDramaProvider(
         val clean = query.trim()
         if (clean.isEmpty()) return newSearchResponseList(emptyList(), false)
 
-        if (UrlUtils.isSeriesPage(clean)) {
-            val imported = ManualHdramaImport.fromUrl(clean) ?: return newSearchResponseList(emptyList(), false)
-            return newSearchResponseList(listOf(imported.toSearchResponse()), false)
+        // Pegar una URL de HDrama abre directamente su ficha real.
+        if (UrlUtils.isSeriesPage(clean) || UrlUtils.isAllowedHdramaUrl(clean)) {
+            val series = runCatching { repository.load(clean) }.getOrNull()
+                ?: ManualHdramaImport.fromUrl(clean)
+            return newSearchResponseList(listOfNotNull(series?.toSearchResponse()), false)
         }
 
         // Atajo de diagnostico: permite abrir el contenido demo sin depender
@@ -116,19 +120,15 @@ class HDramaProvider(
                     "o que el contenido de demostracion exista."
             )
 
-        val episodes = repository.episodes(series).map { it.toCloudEpisode(series) }
-        val recommendations = repository.related(series).map { it.toSearchResponse() }
-        val note = buildString {
-            append(series.synopsis.orEmpty())
-            if (series.demo) {
-                append("\n\nDatos de demostracion local. No son contenido real de HDrama.")
-            } else if (series.source.contains("sitemap", ignoreCase = true)) {
-                append("\n\nCatalogo real obtenido del sitemap publico de HDrama. " +
-                    "La ficha completa, portada y episodios no estan disponibles en esta version.")
-            } else {
-                append("\n\nImportacion manual: no se descargo HTML de HDrama.")
-            }
-        }.trim()
+        val episodes = runCatching { repository.episodes(series) }
+            .getOrDefault(emptyList())
+            .map { it.toCloudEpisode(series) }
+        val recommendations = runCatching { repository.related(series) }
+            .getOrDefault(emptyList())
+            .filter { it.id != series.id }
+            .distinctBy { it.id }
+            .take(MAX_RECOMMENDATIONS)
+            .map { it.toSearchResponse() }
 
         return newTvSeriesLoadResponse(
             name = series.title,
@@ -137,10 +137,10 @@ class HDramaProvider(
             episodes = episodes,
         ) {
             posterUrl = series.posterUrl
-            plot = note
+            plot = buildPlot(series)
             tags = series.genres
-            score = Score.from10(series.rating)
             year = series.year
+            series.rating?.let { score = Score.from10(it) }
             this.recommendations = recommendations
             comingSoon = episodes.isEmpty()
         }
@@ -177,7 +177,7 @@ class HDramaProvider(
             is LinkResolution.Browser -> {
                 throw ErrorLoadingException(
                     "${resolution.status.userMessage} " +
-                        "Usa el boton 'Abrir en navegador' de la ficha para continuar."
+                        "Abre es.hdrama.net en el navegador para continuar."
                 )
             }
 
@@ -186,6 +186,22 @@ class HDramaProvider(
             }
         }
     }
+
+    private fun buildPlot(series: Series): String = buildString {
+        append(series.synopsis.orEmpty().trim())
+        when {
+            series.demo -> append("\n\nDatos de demostracion local. No son contenido real de HDrama.")
+            series.browserOnly -> append(
+                "\n\nNo se pudo cargar el HTML de HDrama. Abre la pagina original en el navegador."
+            )
+            else -> {
+                val source = series.source.takeIf { it.isNotBlank() && it != "HDrama" }
+                append("\n\nFuente: HDrama")
+                if (source != null) append(" · $source")
+                append(". Reproduccion HLS desde la fuente original.")
+            }
+        }
+    }.trim()
 
     private fun seriesUrl(series: Series): String =
         if (series.demo) {
@@ -204,22 +220,23 @@ class HDramaProvider(
             posterUrl = this@toSearchResponse.posterUrl
             year = this@toSearchResponse.year
             episodes = this@toSearchResponse.episodeCount
-            score = Score.from10(this@toSearchResponse.rating)
+            score = this@toSearchResponse.rating?.let { Score.from10(it) }
         }
 
     private fun Episode.toCloudEpisode(series: Series) =
         this@HDramaProvider.newEpisode(
             url = this.id,
             initializer = {
-                name = this@toCloudEpisode.title ?: "Episodio ${this@toCloudEpisode.number}"
+                name = this@toCloudEpisode.title ?: "Capítulo ${this@toCloudEpisode.number}"
                 episode = this@toCloudEpisode.number
                 season = 1
                 runTime = this@toCloudEpisode.durationSeconds
-                description = if (series.demo) {
-                    "Episodio de demostracion (${series.title})."
-                } else {
-                    "Abre la pagina original de HDrama en el navegador."
+                    ?.let { seconds -> (seconds / 60).coerceAtLeast(1) }
+                description = when {
+                    series.demo -> "Episodio de demostracion (${series.title})."
+                    else -> "Capítulo ${this@toCloudEpisode.number} de ${series.title}."
                 }
+                posterUrl = series.posterUrl
             },
             fix = false,
         )
@@ -230,13 +247,14 @@ class HDramaProvider(
             LinkType.MP4, LinkType.BROWSER -> ExtractorLinkType.VIDEO
         }
         val qualityValue = quality.takeIf { it > 0 } ?: Qualities.Unknown.value
+        val isMirror = headers.keys.any { it.equals("Referer", ignoreCase = true) }
         val refererValue = referer ?: when (type) {
             LinkType.BROWSER -> UrlUtils.HDRA_BASE_URL
             else -> null
         }
         return newExtractorLink(
             source = SOURCE_NAME,
-            name = label,
+            name = if (isMirror) "$label (espejo)" else label,
             url = url,
             type = cloudType,
         ) {
@@ -248,5 +266,6 @@ class HDramaProvider(
 
     companion object {
         const val SOURCE_NAME = "HDrama"
+        private const val MAX_RECOMMENDATIONS = 20
     }
 }

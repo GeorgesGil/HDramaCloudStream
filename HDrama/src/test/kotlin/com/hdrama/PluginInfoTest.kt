@@ -9,7 +9,7 @@ class PluginInfoTest {
     @Test
     fun `metadatos coinciden con el manifest esperado`() {
         assertEquals("HDrama", PluginInfo.NAME)
-        assertEquals(1, PluginInfo.VERSION)
+        assertEquals(2, PluginInfo.VERSION)
         assertEquals(1, PluginInfo.API_VERSION)
         assertEquals("com.hdrama.HDramaPlugin", PluginInfo.PLUGIN_CLASS)
         assertEquals("es", PluginInfo.LANGUAGE)
@@ -20,12 +20,14 @@ class PluginInfoTest {
     fun `todas las secciones solicitadas existen`() {
         val keys = CatalogSection.entries.map { it.key }.toSet()
         listOf(
+            "destacados",
             "novedades",
             "mas-vistos",
-            "nuevos-semana",
+            "tendencias",
             "catalogo",
             "generos",
-            "recomendaciones",
+            "fuentes",
+            "acceso",
         ).forEach { assertTrue(it in keys, "Falta la seccion $it") }
     }
 }

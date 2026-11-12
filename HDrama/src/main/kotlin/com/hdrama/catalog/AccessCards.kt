@@ -10,8 +10,8 @@ object AccessCards {
             id = "acceso-hdrama",
             slug = "acceso-hdrama",
             title = "HDrama: abrir sitio oficial",
-            synopsis = "Abre es.hdrama.net en el navegador de Android. " +
-                "La ficha completa y los episodios aun no se muestran en este modo.",
+            synopsis = "Abre es.hdrama.net en el navegador de Android como alternativa " +
+                "si alguna ficha no carga dentro del plugin.",
             genres = listOf("Navegacion"),
             source = "Navegacion",
             language = "es",
@@ -25,7 +25,7 @@ object AccessCards {
             slug = "importar-enlace",
             title = "Importar enlace de HDrama",
             synopsis = "Pega una URL https://es.hdrama.net/series/... en la busqueda de " +
-                "CloudStream. Se creara una ficha de navegacion sin descargar HTML.",
+                "CloudStream. La ficha se carga desde el HTML real del sitio.",
             genres = listOf("Ayuda"),
             source = "Navegacion",
             language = "es",

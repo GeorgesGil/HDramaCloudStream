@@ -1,6 +1,11 @@
 package com.hdrama.models
 
-/** Episodio estable de una serie. */
+/** Episodio estable de una serie.
+ *
+ * @property number numero mostrado al usuario (1..N).
+ * @property externalId identificador interno del episodio en el sitio
+ *   (`bookId:serial`) cuando la ficha se obtuvo del HTML real.
+ */
 data class Episode(
     val id: String,
     val seriesId: String,
@@ -8,6 +13,7 @@ data class Episode(
     val title: String? = null,
     val durationSeconds: Int? = null,
     val pageUrl: String? = null,
+    val externalId: String? = null,
     val mediaSources: List<MediaSource> = emptyList(),
     val subtitles: List<SubtitleTrack> = emptyList(),
 )

@@ -1,5 +1,6 @@
 # Gradle / Android
 .gradle/
+.kotlin/
 build/
 */build/
 local.properties
@@ -32,3 +33,8 @@ Desktop.ini
 _research/
 research/
 *.log
+
+# Entorno local del agente (caché de Gradle y sondeos)
+.gradle-home/
+tmp/
+.playwright-mcp/
