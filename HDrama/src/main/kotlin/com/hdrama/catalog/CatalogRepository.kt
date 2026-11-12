@@ -12,11 +12,11 @@ import com.hdrama.utils.UrlUtils
  * Repositorio de catalogo.
  *
  * Prioridad:
- * 1. Catalogo real desde sitemaps publicos (sin eludir Cloudflare).
+ * 1. Catalogo real desde sitemaps publicos.
  * 2. Catalogo demo local si la red falla.
  * 3. Importacion manual de URLs para fichas concretas.
  *
- * El adaptador que descargaria HTML protegido sigue deshabilitado.
+ * El adaptador HTML todavia no incluye extraccion de fichas.
  */
 class CatalogRepository(
     private val demo: DemoCatalogAdapter = DemoCatalogAdapter(),

@@ -10,7 +10,6 @@ import com.hdrama.player.LinkResolution
 import com.hdrama.player.LinkResolver
 import com.hdrama.player.LinkType
 import com.hdrama.player.ResolvedLink
-import com.hdrama.utils.AuthorizationPolicy
 import com.hdrama.utils.TextNormalizer
 import com.hdrama.utils.UrlUtils
 import com.lagradost.cloudstream3.ErrorLoadingException
@@ -41,7 +40,7 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
  * - Catalogo demo local completamente funcional (datos sinteticos y videos
  *   publicos de prueba).
  * - Navegacion al sitio original e importacion manual de enlaces.
- * - Integracion directa con HDrama **deshabilitada** hasta autorizacion.
+ * - El adaptador de fichas HTML todavia esta en desarrollo.
  */
 class HDramaProvider(
     private val repository: CatalogRepository = CatalogRepository(),
@@ -125,12 +124,9 @@ class HDramaProvider(
                 append("\n\nDatos de demostracion local. No son contenido real de HDrama.")
             } else if (series.source.contains("sitemap", ignoreCase = true)) {
                 append("\n\nCatalogo real obtenido del sitemap publico de HDrama. " +
-                    "La ficha completa, portada y episodios requieren un canal de acceso autorizado.")
+                    "La ficha completa, portada y episodios no estan disponibles en esta version.")
             } else {
                 append("\n\nImportacion manual: no se descargo HTML de HDrama.")
-            }
-            if (!AuthorizationPolicy.isAuthorized()) {
-                append("\nLa integracion con el HTML protegido no usa evasiones de Cloudflare.")
             }
         }.trim()
 

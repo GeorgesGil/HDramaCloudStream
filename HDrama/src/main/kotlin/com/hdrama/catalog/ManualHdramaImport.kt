@@ -11,8 +11,7 @@ import com.hdrama.utils.UrlUtils
  * Importacion manual de una ficha o pagina de HDrama.
  *
  * No realiza peticiones de red ni parsea HTML: solo valida la URL y construye
- * una ficha de navegacion. Es la alternativa permitida cuando no hay acceso
- * autorizado al HTML protegido.
+ * una ficha de navegacion basada en la direccion suministrada.
  */
 object ManualHdramaImport {
     fun fromUrl(url: String?): Series? {

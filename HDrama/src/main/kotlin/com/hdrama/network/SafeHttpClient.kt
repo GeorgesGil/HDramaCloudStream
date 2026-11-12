@@ -13,9 +13,7 @@ fun interface HttpTransport {
 /**
  * Cliente HTTP con allowlist de dominios, reintentos limitados y cancelacion.
  *
- * No se usa mientras `AuthorizationPolicy` este deshabilitada. Se incluye para
- * que el dia que exista autorizacion el adaptador tenga una capa segura y
- * testeable, sin acoplarse a OkHttp directamente.
+ * Capa HTTP reutilizable y testeable, desacoplada de OkHttp.
  */
 class SafeHttpClient(
     private val transport: HttpTransport,

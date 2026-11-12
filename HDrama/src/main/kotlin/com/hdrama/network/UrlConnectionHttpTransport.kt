@@ -9,9 +9,8 @@ import java.net.URL
 /**
  * Transporte HTTP basado en HttpURLConnection.
  *
- * Se usa solo para los sitemaps publicos de HDrama (permitidos por robots.txt).
- * No gestiona cookies, challenges ni autenticacion, y no intenta resolver
- * Cloudflare. Si el servidor responde 403, se propaga el error.
+ * Transporta las solicitudes HTTP del cliente de sitemaps.
+ * Si el servidor devuelve un error HTTP, lo propaga al llamador.
  */
 class UrlConnectionHttpTransport(
     private val connectTimeoutMs: Int = 10_000,

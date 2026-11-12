@@ -7,7 +7,7 @@ import com.hdrama.models.Series
 
 /**
  * Contrato de una fuente de catalogo. Permite intercambiar el catalogo demo
- * por un adaptador HDrama autorizado sin tocar el provider de CloudStream.
+ * por un adaptador HDrama con metadatos completos sin cambiar el provider.
  */
 interface CatalogAdapter {
     suspend fun section(section: CatalogSection, page: Int): CatalogPage<Series>
