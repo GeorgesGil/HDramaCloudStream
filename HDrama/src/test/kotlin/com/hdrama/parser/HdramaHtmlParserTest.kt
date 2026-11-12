@@ -208,6 +208,19 @@ class HdramaHtmlParserTest {
     }
 
     @Test
+    fun `parsea el bookId del payload RSC actual seguido del array de episodios`() {
+        // Formato verificado en el sitio el 2026-11-12: el bookId ya no va
+        // seguido de "slug" sino de "episodes" con chapter_id/serial_number.
+        val html = """
+            <html><body><h1>La ultima en la academia</h1>
+            <script>self.__next_f.push([1,"\"${'$'}L46\",null,{\"bookId\":\"29358\",\"episodes\":[{\"chapter_id\":\"sd29358-1\",\"serial_number\":1,\"is_locked\":false}]}"])</script>
+            </body></html>
+        """.trimIndent()
+
+        assertEquals("29358", parser.parseBookId(html, "la-ultima-en-la-academia"))
+    }
+
+    @Test
     fun `elige el bookId mas cercano cuando hay varios y el slug esta lejos`() {
         val html = """
             <html><body><h1>La novia</h1>

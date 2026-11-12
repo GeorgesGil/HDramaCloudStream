@@ -1,6 +1,6 @@
 # Investigación: HDrama (es.hdrama.net)
 
-Fecha: 2026-11-11. Actualizado para la versión 2 del plugin.
+Fecha: 2026-11-11. Actualizado el 2026-11-12 para la versión 3 del plugin.
 
 La investigación inicial (2026-11-11) observó los sitemaps públicos y el
 Cloudflare Managed Challenge. Para la versión 2 se repitió el análisis con una
@@ -9,6 +9,12 @@ descargaron las páginas HTML del sitio y se analizaron las rutas, los datos
 estructurados JSON-LD, el DOM de las fichas y la API interna de fuentes de
 video. Los HTML completos de referencia quedaron en `tmp/raw/` (no
 versionados); las fixtures de las pruebas son versiones recortadas.
+
+La versión 3 corrige la capa de red con evidencia adicional tomada el
+2026-11-12: comprobaciones `curl` de la sesión (cookie `cf_clearance`,
+User-Agent y `Referer`), respuesta real de la API de fuentes con la fuente
+Stardust y verificación del flujo de descarga que usa CloudStream. Esa evidencia
+está en las secciones 3, 8 y 9.
 
 ## 1. Identidad del sitio
 
@@ -23,6 +29,12 @@ versionados); las fixtures de las pruebas son versiones recortadas.
 | API de fuentes | `/api/episode-source/<bookId>/<serial>?lang=es&refresh=1` |
 | Sitemap índice | `https://es.hdrama.net/sitemap.xml` |
 | Sitemaps hijos | `/sitemaps/new-es`, `/sitemaps/trending-es`, `/sitemaps/fresh-es`, `/sitemaps/static-es` |
+
+El `bookId` que usa la API no tiene un formato único: en las muestras aparece
+como número (`15531`, `29358`), como id hexadecimal, como UUID
+(`7acef74a-7aee-4d29-bbad-8c708d967d1e` en el emulador del 2026-11-12) o como
+el propio slug de la serie. El parser y el cliente de fuentes lo aceptan como
+texto alfanumérico.
 
 ## 2. `robots.txt`
 
@@ -70,17 +82,41 @@ El cuerpo es la página "Just a moment..." de **Cloudflare Managed Challenge**,
 que exige JavaScript y cookies. Los sitemaps (`/sitemap.xml` y
 `/sitemaps/*`) siguen respondiendo HTTP 200 sin challenge.
 
-En el plugin la sesión se resuelve con el interceptor de CloudStream:
+### Evidencia de la sesión (2026-11-12)
 
-```kotlin
-app.get(url, interceptor = CloudflareKiller())
-```
+Comprobaciones con `curl` contra el sitio:
 
-`CloudflareKiller` abre un WebView, resuelve el challenge y reutiliza las
-cookies (`cf_clearance`) en las peticiones posteriores. Se crea **una sola
-instancia por fetcher**, porque su inicialización borra cookies. La API
-`/api/episode-source/...` también exige esas cookies: sin ellas responde HTTP
-403 con `{"error":"forbidden"}`.
+| Petición | Resultado |
+|---|---|
+| `GET /` sin cookie | 403 (challenge) |
+| `GET /` con cookie `cf_clearance` y User-Agent de Chrome | 200 (HTML real) |
+| `GET /api/episode-source/...` con cookie y sin `Referer` | 403 `{"error":"forbidden"}` |
+| `GET /api/episode-source/...` con cookie y `Referer: https://es.hdrama.net/` | 200 |
+| `GET /api/episode-source/...` con cookie y `Sec-Fetch-Site: same-origin` | 200 |
+
+Conclusión: la API exige una petición **same-origin** a nivel de cabeceras
+(`Referer` o `Sec-Fetch-Site`), no un XHR dentro de un WebView. Basta con
+resolver el challenge una vez y usar un cliente HTTP normal para todo.
+
+### Cómo se resuelve en el plugin (versión 3)
+
+1. `WebViewCloudflareSession` crea **un solo** WebView y carga
+   `https://es.hdrama.net/`.
+2. Sondea `CookieManager.getCookie()` cada 350 ms hasta que aparece
+   `cf_clearance` (timeout 75 s en emuladores lentos; en un teléfono normal se
+   resuelve en pocos segundos).
+3. Destruye el WebView y guarda la cookie y `WebSettings.getDefaultUserAgent()`.
+   El User-Agent debe coincidir con el que resolvió el challenge.
+4. Todas las peticiones posteriores (HTML y API) van por OkHttp con esa cookie,
+   ese User-Agent y `Referer: https://es.hdrama.net/`.
+5. `invalidate()` fuerza un challenge nuevo tras un 403/503 sin borrar todas
+   las cookies de la app; tras un fallo hay un backoff de 15 s para no encadenar
+   WebViews.
+
+El WAF de `/api/` **no** resuelve challenges: lanzar un WebView sobre esa ruta
+solo perdería tiempo y acabaría en 403. Por eso el cliente de fuentes hace un
+warm-up de la portada antes de llamar a la API y el plugin adelanta el
+challenge al cargarse.
 
 ## 4. Rutas reales verificadas
 
@@ -116,7 +152,7 @@ El nodo **no** incluye `aggregateRating`: la nota se lee del DOM
 ```json
 {"@type":"CollectionPage","name":"...","mainEntity":{"@type":"ItemList",
  "numberOfItems":24,"itemListElement":[{"position":1,
- "url":"https://es.hdrama.net/series/<slug>","name":"Título","image":"https://...jpg"}]}}
+  "url":"https://es.hdrama.net/series/<slug>","name":"Título","image":"https://...jpg"}]}}
 ```
 
 Los `url` usan el host `https://es.hdrama.net/series/...` (a veces
@@ -153,7 +189,8 @@ Selectores verificados con jsoup sobre `tmp/raw/detail-la-novia.html`:
   - `aria-label="Capítulo N"`;
   - título en la primera `span.block.truncate`;
   - duración en la siguiente `span` con formato `m:ss` o `mm:ss`.
-  Se muestran todos los episodios (75 en el ejemplo), no solo los primeros 30.
+  Se muestran todos los episodios (75 en el ejemplo, 64 en el del emulador),
+  no solo los primeros 30.
 - Relacionadas: bajo el `h2` "También te puede gustar" hay tarjetas
   `article` con `a[href*="/series/"]`, `img[alt]` y `aria-label`. Se excluye la
   propia ficha.
@@ -161,10 +198,16 @@ Selectores verificados con jsoup sobre `tmp/raw/detail-la-novia.html`:
   scripts inline y con barras invertidas de escape. La técnica fiable es
   eliminar todas las barras invertidas del HTML
   (`html.replace("\\", "")`) y buscar
-  `bookId"\s*:\s*"(\d+)"\s*,\s*"slug"\s*:\s*"<slug>"`. En el ejemplo:
-  `bookId":"15531","slug":"la-novia-sustituta-..."`. En la ficha aparecen
-  `bookId` de otras series (relacionadas), así que hay que emparejarlo con el
-  slug de la ficha actual.
+  `bookId"\s*:\s*"([A-Za-z0-9_-]{1,80})"`. En la ficha aparecen `bookId` de
+  otras series (relacionadas), así que se elige el más cercano al slug de la
+  ficha actual.
+- Formato RSC actual (2026-11-12): el `bookId` ya no va seguido de `"slug"`,
+  sino del array de episodios:
+  `{"bookId":"29358","episodes":[{"chapter_id":"sd29358-1","serial_number":1,...}]}`.
+  El parser prefiere el `bookId` seguido de `,"episodes"` cuando no puede
+  emparejarlo por cercanía al slug.
+- El `bookId` puede ser un UUID (evidencia del emulador:
+  `7acef74a-7aee-4d29-bbad-8c708d967d1e`), no solo un número.
 - `firstSerial` (también en el payload RSC) es el serial base; los
   `data-serial` de los episodios ya vienen resueltos.
 
@@ -186,21 +229,30 @@ Cada tarjeta es un `article` con esta estructura:
 - Nota y número de episodios: spans del overlay (`EP 75`, `7.4`); son
   opcionales y no bloquean si faltan.
 - URL normalizada y deduplicada por slug.
-- En los listados se prefiere el JSON-LD `CollectionPage`; las tarjetas se
-  usan como respaldo y para búsqueda y portada.
+- En los listados se prefiere el JSON-LD `CollectionPage`; las tarjetas se usan
+  como respaldo y para búsqueda y portada.
 
 ## 8. API de fuentes de video y cifrado
 
 `GET https://es.hdrama.net/api/episode-source/<bookId>/<serial>?lang=es&refresh=1`
 
-Respuesta verificada (fixture):
+Respuesta real del 2026-11-12 (fixture `hdrama-source-api.json`, `enc`
+abreviado):
 
 ```json
-{"descriptor":{"source":"FlickReels","chain":[
- {"enc":"mqDHwriF...","type":"hls","source":"FlickReels","refresh":false,"refreshAfter":null},
- {"enc":"ueB4Z517...","type":"hls","source":"FlickReels","refresh":true,"refreshAfter":1794444495}
+{"descriptor":{"source":"Stardust","chain":[
+ {"enc":"bA0EB72B...","type":"hls","source":"Stardust","refresh":false,"refreshAfter":null}
 ],"subtitle":null}}
 ```
+
+La URL descifrada es:
+
+```text
+https://acdn-v-us.stardust-tv.com/prod/29358/1/e4bf2b9fce7c423ca661b3d65529a7f4.m3u8
+```
+
+Es una **media playlist** HLS: no tiene `#EXT-X-STREAM-INF` ni variantes de
+calidad, solo segmentos `.ts` relativos. La fuente anterior era FlickReels.
 
 ### Descifrado de `enc`
 
@@ -215,32 +267,67 @@ Respuesta verificada (fixture):
 
 Vectores de prueba (fixture `hdrama-source-enc.json`), con `enc` abreviado:
 
-| `enc` (prefijo) | URL descifrada |
-|---|---|
-| `mqDHwriF...` | `https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8` |
-| `ueB4Z517...` | `https://zshipricf.farsunpteltd.net/playlet-hls/1793611042_hls_47068.m3u8?verify=1794445095-7GTUC2QIzP8gJ3gRToR9ftplZqiamm4jAChNpAuY0uI%3D` |
+| `enc` (prefijo) | URL descifrada | Origen |
+|---|---|---|
+| `bA0EB72B...` | `https://acdn-v-us.stardust-tv.com/prod/29358/1/e4bf2b9fce7c423ca661b3d65529a7f4.m3u8` | 2026-11-12, fuente Stardust |
+| `eomFYhl/...` | `https://pl.shortdizilab.com/v1/flickreels/23935678.m3u8` | 2026-11-11, FlickReels |
+| `bT3GSNnw...` | `https://zshipricf.farsunpteltd.net/playlet-hls/1793611042_hls_47068.m3u8?verify=...` | 2026-11-11, FlickReels |
+| `fUWHIriZ...` | `https://pl.shortdizilab.com/v1/flickreels/23935680.m3u8` | 2026-11-11, FlickReels |
 
 `refresh` y `refreshAfter` indican que el token caduca: hay que resolver la
 fuente en el momento de reproducir y no reutilizarla más de unos minutos.
 `subtitle` fue `null` en la muestra; el cliente lo ignora de forma defensiva
 (puede venir `null`, objeto o lista) y no emite subtítulos desde esta API.
 
-## 9. Reproducción de las URLs obtenidas
+## 9. Reproducción y descarga de las URLs obtenidas
 
 Comprobaciones con peticiones desde el host:
 
-- URL directa (`zshipricf...m3u8?verify=...`): **200 sin cabecera
-  `Referer`**; **403 si se envía `Referer: https://es.hdrama.net/`**. Se emite
-  sin headers.
-- Proxy espejo `https://cdn.dramadizilerim.xyz/https/<URL directa>`: **200 con
-  `Referer: https://es.hdrama.net/`**; **451 sin `Referer`**. Se ofrece como
-  segunda opción.
-- Las entradas `pl.shortdizilab.com/v1/flickreels/<id>.m3u8` devolvieron 404 en
-  la comprobación: se emiten igualmente (el player prueba la cadena) pero no
-  bloquean si fallan.
+- URL directa del CDN de Stardust: **200 sin cabecera `Referer`**; el plugin la
+  emite sin headers y ExoPlayer reproduce el HLS.
+- La API que entrega la URL **sí** exige `Referer: https://es.hdrama.net/`
+  (sección 3); la URL del CDN no.
+- Proxy espejo `https://cdn.dramadizilerim.xyz/https/<URL directa>`: devuelve
+  **451 sin `Referer`** y **403 con `Referer`**. Además el código de la v2 lo
+  construía mal (`/https/https://...`). Se eliminó: ya no se emite.
+- Las entradas antiguas de `pl.shortdizilab.com/v1/flickreels/...` devolvieron
+  404 en las comprobaciones; el cliente descarta lo que no puede descifrar o
+  mapear y el player prueba los enlaces que sí se emiten.
+- La cadena de fuentes puede traer varios enlaces y alguno muerto: en la
+  comprobación del 2026-11-12 el primer enlace
+  (`pl.shortdizilab.com/v1/flickreels/21648199.m3u8`) devolvía 404 y el segundo
+  (`zshipricf.farsunpteltd.net/playlet-hls/...`) respondía 200. CloudStream
+  reproduce el primero de la lista, por eso el plugin comprueba cada URL antes
+  de entregarla (ver "Selección del enlace").
 - No hay DRM en el sitio: solo HLS/MP4 normales. `MediaSource` no modela DRM.
 
-## 10. Estado de implementación (versión 2)
+### Selección del enlace
+
+`HttpSourceProbe` (en `sources/SourceProbe.kt`) comprueba la disponibilidad de
+cada URL antes de entregarla al reproductor:
+
+- Con una sola URL no hace ninguna petición.
+- Para HLS pide el inicio del manifiesto (es pequeño); para MP4 pide un rango de
+  1 KB. Timeout de 6 s por URL, sin `Referer` y en paralelo.
+- Conserva el orden original, descarta las URLs que no responden y cachea el
+  resultado 60 s.
+- Si ninguna responde, devuelve las originales para que el player muestre el
+  error real y el usuario pueda reintentar.
+
+### Descarga desde CloudStream
+
+CloudStream descarga el mismo enlace que reproduce el plugin:
+
+1. `HDramaProvider` emite `ExtractorLinkType.M3U8` con la URL directa y sin
+   headers (`hasDownloadSupport = true`).
+2. Para `ExtractorLinkType.M3U8`, CloudStream usa
+   `VideoDownloadManager.downloadHLS` → `M3u8Helper2.hslLazy`.
+3. `HlsPlaylistParser.parse` devuelve `null` porque la playlist no tiene
+   `#EXT-X-STREAM-INF`; el flujo continúa como "media segments".
+4. Se descargan los segmentos `.ts` (relativos a la URL del playlist) y se
+   concatenan en un archivo MP4. No hace falta proxy ni cabeceras especiales.
+
+## 10. Estado de implementación (versión 3)
 
 | Módulo | Estado | Implementación |
 |---|---|---|
@@ -248,9 +335,11 @@ Comprobaciones con peticiones desde el host:
 | Búsqueda real | Implementado | `/search?q=` con tarjetas `article` |
 | Ficha de serie completa | Implementado | JSON-LD `TVSeries`, DOM, nota y `bookId` del payload RSC |
 | Lista de episodios | Implementado | `data-serial`/`data-display`, duraciones y `externalId=bookId:serial` |
-| Fuentes de video | Implementado | API `/api/episode-source`, `HdramaSourceCipher` AES-256-GCM |
-| Reproducción HLS | Implementado | HLS directo sin headers y proxy espejo con `Referer` |
-| Sesión Cloudflare | Implementado | `WebViewFetcher` (WebView del sistema; `CloudstreamWebFetcher` como respaldo) |
+| Fuentes de video | Implementado | API `/api/episode-source`, `HdramaSourceCipher` AES-256-GCM, solo URLs directas |
+| Comprobación de enlaces | Implementado | `HttpSourceProbe` (HLS/MP4, 6 s, sin `Referer`, caché de 60 s) descarta URLs muertas antes del player |
+| Reproducción HLS | Implementado | `ExtractorLinkType.M3U8` con URL directa y sin headers; ExoPlayer reproduce el HLS |
+| Descarga HLS | Implementado | CloudStream descarga el playlist, concatena los segmentos `.ts` en un MP4 |
+| Sesión Cloudflare | Implementado | `WebViewCloudflareSession` resuelve el challenge una vez; `HdramaHttpFetcher` hace el resto por OkHttp; warm-up al cargar el plugin |
 | Respaldo sin sesión | Implementado | Sitemaps públicos, fichas de navegación e importación manual |
 | Catálogo demo | Implementado | 17 series sintéticas y MP4/HLS públicos en "Acceso a HDrama" |
 
@@ -260,12 +349,18 @@ Comprobaciones con peticiones desde el host:
   Challenge el 2026-11-11; los HTML completos están en `tmp/raw/` (no
   versionados) y las versiones recortadas en
   `HDrama/src/test/resources/fixtures/`.
+- Sesión de comprobación del 2026-11-12 con `curl` para la cookie, el
+  User-Agent y el `Referer` de la API, y con el emulador Android 15 para el
+  challenge y el catálogo real (`bookId` UUID con 64 episodios).
 - El sitio es un objetivo en movimiento: rutas, selectores, claves de
-  cifrado y hosts de video pueden cambiar sin aviso. La capa de respaldo
-  (sitemaps, navegación y demo) cubre esos fallos, y las limitaciones
-  conocidas están en [`08-limitaciones.md`](08-limitaciones.md).
+  cifrado, formato del `bookId` y hosts de video pueden cambiar sin aviso. La
+  capa de respaldo (sitemaps, navegación y demo) cubre esos fallos, y las
+  limitaciones conocidas están en [`08-limitaciones.md`](08-limitaciones.md).
 - La nota y los metadatos dependen de la estructura del HTML; el parser es
   tolerante y deja campos opcionales en `null` cuando no los encuentra.
+- La verificación de reproducción y descarga completas en emulador se cierra en
+  la entrega v1.2.0; las suites JVM y el análisis del código de CloudStream
+  cubren el mecanismo.
 
 ## 12. Referencias
 

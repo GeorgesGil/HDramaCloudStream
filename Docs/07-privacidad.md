@@ -1,6 +1,6 @@
 # Política de privacidad
 
-Fecha: 2026-11-11. Aplica a la versión 2 del plugin.
+Fecha: 2026-11-12. Aplica a la versión 3 del plugin.
 
 ## 1. Principio
 
@@ -18,8 +18,8 @@ a los hosts de video que el propio sitio indica.
 | `/api/episode-source/<bookId>/<serial>` | Obtener la fuente HLS/MP4 del episodio | `es.hdrama.net` |
 | Sitemaps (`sitemap.xml` y `/sitemaps/*`) | Respaldo del catálogo si la sesión falla | `es.hdrama.net` |
 | URL de ficha importada manualmente | Abrir la ficha real o, si falla, una tarjeta de navegación | `es.hdrama.net` / navegador del usuario |
-| Manifest HLS y segmentos del video | Reproducción del episodio | Hosts indicados por el sitio (p. ej. `zshipricf.farsunpteltd.net`, `pl.shortdizilab.com`) |
-| Proxy espejo `cdn.dramadizilerim.xyz` | Alternativa de reproducción cuando el host directo falla | `cdn.dramadizilerim.xyz` |
+| Manifest HLS y segmentos del video | Reproducción del episodio | Hosts indicados por el sitio (por ejemplo `zshipricf.farsunpteltd.net`, `acdn-v-us.stardust-tv.com`) |
+| Sonda de disponibilidad de enlaces | Descartar URLs de video muertas antes de reproducir (manifiesto HLS o 1 KB del MP4) | Los mismos hosts de video |
 | Videos demo MP4/HLS | Diagnóstico del reproductor | `media.w3.org`, `test-streams.mux.dev` |
 | Portadas de las tarjetas de acceso | Placeholder visual de las tarjetas locales | `placehold.co` |
 
@@ -29,16 +29,19 @@ contraseña porque el sitio no ofrece cuentas que el plugin utilice.
 
 ## 3. Cookies y sesión de Cloudflare
 
-- HDrama está detrás de un Cloudflare Managed Challenge. El plugin usa
-  El `WebViewFetcher` del plugin: la app abre un WebView, resuelve el
-  challenge y reutiliza las cookies (`cf_clearance`) en las peticiones
-  siguientes.
-- Las cookies las gestiona CloudStream/WebView dentro del proceso de la app; el
-  plugin no las lee, no las exporta, no las registra y no las envía a terceros.
-  `Diagnostics` redacta `token`, `cookie`, `session`, `authorization` y
-  `password` en los mensajes de error.
-- La sesión caduca según Cloudflare y el sitio; cuando deja de ser válida, el
-  plugin cae a los sitemaps y a las fichas de navegación.
+- HDrama está detrás de un Cloudflare Managed Challenge. `WebViewCloudflareSession`
+  abre **un** WebView, carga `https://es.hdrama.net/` y sondea
+  `CookieManager` hasta que aparece `cf_clearance`; después destruye el WebView.
+  La cookie y el User-Agent del WebView se guardan en memoria y se envían
+  únicamente en las peticiones a `es.hdrama.net` (HTML y `/api/`), junto con
+  `Referer: https://es.hdrama.net/`.
+- El plugin **lee** `CookieManager` para reutilizar esa cookie dentro del
+  proceso de la app, pero no la exporta, no la escribe en disco, no la registra
+  y no la envía a terceros. `Diagnostics` redacta `token`, `cookie`, `session`,
+  `authorization` y `password` en los mensajes de error.
+- La sesión caduca según Cloudflare y el sitio; ante un 403/503 se renueva el
+  challenge una vez. Si sigue sin resolverse, el plugin cae a los sitemaps y a
+  las fichas de navegación.
 
 ## 4. Almacenamiento
 
@@ -52,6 +55,9 @@ contraseña porque el sitio no ofrece cuentas que el plugin utilice.
 - Las entradas se descartan al salir del proceso o al agotarse el TTL.
 - CloudStream conserva favoritos, historial y progreso según su propia
   política; el plugin no accede a esos datos.
+- Las descargas de episodios las guarda **CloudStream** en la carpeta que el
+  usuario elija una sola vez (selector de carpetas de Android); el plugin no
+  escribe archivos ni accede a esa carpeta.
 
 ## 5. Registros
 
@@ -65,10 +71,11 @@ contraseña porque el sitio no ofrece cuentas que el plugin utilice.
 
 - La navegación al sitio original abre el navegador del usuario; a partir de
   ahí se aplican la política y los términos de HDrama.
-- Los hosts de video y el proxy espejo son servicios de terceros: reciben la
-  IP del dispositivo y las cabeceras normales de una petición HTTP/HTTPS. El
-  plugin solo envía `Referer: https://es.hdrama.net/` al proxy espejo, que es
-  lo que ese servicio exige para responder.
+- Los hosts de video son servicios de terceros: reciben la IP del dispositivo y
+  las cabeceras normales de una petición HTTP/HTTPS. El plugin no envía
+  `Referer` a esos hosts (el host directo responde 403 si lo recibe); cuando
+  comprueba si una URL responde, solo pide el manifiesto HLS o los primeros
+  bytes del MP4.
 - Los videos demo son recursos públicos de terceros; su disponibilidad y
   condiciones dependen de sus proveedores.
 - Las tarjetas de acceso usan imágenes de `placehold.co` con parámetros fijos.

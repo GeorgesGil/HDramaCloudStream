@@ -22,15 +22,58 @@ object HdramaRuntime {
         ?: error("HDrama: el contexto de la app no se inicializo")
 }
 
-/** Crea el fetcher adecuado para el entorno actual. */
+/**
+ * Crea el fetcher adecuado para el entorno actual.
+ *
+ * - **Android**: [HdramaHttpFetcher] con una [WebViewCloudflareSession]
+ *   compartida y [WebViewFetcher] como respaldo. Todas las peticiones van por
+ *   OkHttp; el WebView solo se abre una vez para obtener `cf_clearance`.
+ * - **JVM sin contexto** (pruebas): [CloudstreamWebFetcher], que no necesita
+ *   WebView propio porque CloudStream aporta `CloudflareKiller`.
+ *
+ * Se devuelve una unica instancia por proceso: la sesion de Cloudflare y las
+ * cookies deben compartirse entre el catalogo y la API de fuentes.
+ */
 object WebFetcherFactory {
+
+    @Volatile
+    private var shared: WebFetcher? = null
+
+    fun create(): WebFetcher = shared ?: synchronized(this) {
+        shared ?: build().also { shared = it }
+    }
+
     /**
-     * En Android usa [WebViewFetcher] (el challenge de Cloudflare de HDrama
-     * rechaza peticiones OkHttp aunque lleven cf_clearance). En pruebas JVM sin
-     * contexto devuelve [CloudstreamWebFetcher] para no romper la construccion.
+     * Resuelve el challenge de Cloudflare en segundo plano (si el fetcher es el
+     * de OkHttp). Se llama al cargar el plugin para adelantar trabajo.
      */
-    fun create(): WebFetcher {
+    suspend fun warmUp(): Boolean = (create() as? HdramaHttpFetcher)?.warmUp() ?: false
+
+    /** Solo para pruebas: olvida la instancia compartida. */
+    internal fun resetForTests() {
+        shared = null
+    }
+
+    private fun build(): WebFetcher {
         val context = HdramaRuntime.contextOrNull() ?: return CloudstreamWebFetcher()
-        return WebViewFetcher(context)
+        return HdramaHttpFetcher(
+            session = WebViewCloudflareSession(context),
+            fallback = WebViewFetcher(context),
+        )
+    }
+}
+
+/**
+ * Crea la sonda de disponibilidad de las URLs de video.
+ *
+ * En Android usa OkHttp con un timeout corto; en JVM (pruebas) devuelve
+ * [com.hdrama.sources.NoSourceProbe] para no hacer red.
+ */
+object SourceProbeFactory {
+    fun create(): com.hdrama.sources.SourceProbe {
+        if (HdramaRuntime.contextOrNull() == null) {
+            return com.hdrama.sources.NoSourceProbe
+        }
+        return com.hdrama.sources.HttpSourceProbe(CloudstreamHttpTransport())
     }
 }

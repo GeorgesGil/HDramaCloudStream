@@ -3,10 +3,13 @@
 Extensión de [CloudStream](https://github.com/recloudstream/cloudstream) para
 [es.hdrama.net](https://es.hdrama.net/), escrita en Kotlin.
 
-**Estado:** versión 2 (release v1.1.0), beta. El catálogo, la búsqueda, las
-fichas, los episodios y el video HLS se obtienen del sitio real. La sesión de
-Cloudflare la resuelve el WebView de CloudStream; si no está disponible, el
-plugin usa los sitemaps públicos y fichas de navegación como respaldo.
+**Estado:** versión 3 (release de referencia v1.2.0), beta. El catálogo, la
+búsqueda, las fichas, los episodios y el video HLS se obtienen del sitio real.
+La versión 3 reescribe la capa de red: el Cloudflare Managed Challenge se
+resuelve **una sola vez** en un WebView y todas las peticiones (HTML y API) se
+hacen después por OkHttp con la cookie `cf_clearance`, el User-Agent del WebView
+y `Referer: https://es.hdrama.net/`. El resultado son URLs HLS directas, sin
+proxy ni cabeceras, que ExoPlayer reproduce y CloudStream puede descargar.
 
 ## Qué funciona
 
@@ -17,20 +20,35 @@ plugin usa los sitemaps públicos y fichas de navegación como respaldo.
 | Búsqueda real (`/search?q=`) | Implementada |
 | Ficha real: póster, sinopsis, géneros, nota, año y relacionadas | Implementada |
 | Lista completa de episodios con duración y número mostrado | Implementada |
-| Sesión Cloudflare vía WebView del sistema (`WebViewFetcher`) | Implementada |
-| Fuentes de video: HLS directo + proxy espejo | Implementado |
-| Descifrado AES-256-GCM del payload `/api/episode-source` | Implementado y probado con vectores |
+| Sesión Cloudflare | Resuelta una vez por proceso (`WebViewCloudflareSession`) y warm-up al cargar el plugin |
+| Fuentes de video: HLS directo desde la URL descifrada | Implementado; sin proxy ni cabeceras |
+| Comprobación de enlaces de video (`SourceProbe`) | Implementado; descarta URLs muertas antes de entregarlas al player |
+| Reproducción HLS en ExoPlayer | Implementada con enlace `ExtractorLinkType.M3U8` directo |
+| Descarga desde CloudStream | Implementada; CloudStream descarga el HLS y concatena los segmentos en un MP4 |
+| Descifrado AES-256-GCM del payload `/api/episode-source` | Implementado y probado con vectores, incluida la fuente Stardust |
 | Respaldo por sitemaps y fichas de navegación sin sesión | Implementado |
 | Catálogo demo con MP4/HLS públicos ("Acceso a HDrama") | Implementado |
 | Estados de error diferenciados y mensajes en español | Implementado |
 | Subtítulos | Soportados si la fuente los aporta |
 | Favoritos, historial, continuar viendo y pantalla completa | Nativos de CloudStream |
-| Pruebas unitarias JVM | 98 pruebas unitarias en 16 suites |
+| Pruebas unitarias JVM | 117 pruebas unitarias en 18 suites |
 
 ## Capturas
 
+Capturas de la verificación de la versión 3 (emulador Android 15 +
+CloudStream 4.9.1): ficha real con 125 episodios, reproducción HLS real
+(`Rendered first frame`) y búsqueda real.
+
+| Ficha real v3 (125 episodios) | Reproducción HLS v3 |
+|---|---|
+| ![Ficha v3](Docs/images/07-ficha-real-v3.png) | ![HLS v3](Docs/images/08-reproduccion-hls-v3.png) |
+
+| Búsqueda real v3 |
+|---|
+| ![Búsqueda v3](Docs/images/09-busqueda-real-v3.png) |
+
 Capturas de la verificación de la versión 2 (emulador Android 14 + CloudStream
-4.9.1):
+4.9.1). La versión 3 conserva el mismo catálogo y las mismas fichas:
 
 | Catálogo real (HTML) | Ficha real con episodios |
 |---|---|
@@ -50,27 +68,37 @@ entonces solo con sitemaps); el detalle de pruebas está en
 
 ## Cómo funciona
 
-1. CloudStream pide la pantalla principal y el plugin consulta el HTML del
-   sitio con la sesión de Cloudflare que gestiona un WebView del sistema
-   (`WebViewFetcher`); `CloudflareKiller` queda como respaldo para entornos sin
-   contexto Android.
-2. El parser extrae JSON-LD y DOM: títulos, pósters, notas, metadatos,
+1. Al cargar el plugin, `HDramaPlugin` lanza en segundo plano el warm-up de la
+   sesión: un único WebView carga `https://es.hdrama.net/` y se sondea
+   `CookieManager` cada 350 ms hasta que aparece `cf_clearance` (timeout 75 s).
+   El WebView se destruye y se guardan la cookie y el User-Agent.
+2. Todas las peticiones (HTML y `/api/`) van por OkHttp con `app.get` de
+   CloudStream, enviando `cookie`, `user-agent` del WebView,
+   `referer: https://es.hdrama.net/` y `accept-language`; en `/api/` se envía
+   `accept: application/json`. Ante 403/503 se renueva la sesión una vez.
+3. El parser extrae JSON-LD y DOM: títulos, pósters, notas, metadatos,
    episodios y relacionadas.
-3. Al reproducir un episodio se consulta
-   `/api/episode-source/<bookId>/<serial>`, se descifra el payload con
-   AES-256-GCM y se emiten las URLs HLS: la directa y un espejo con `Referer`.
-4. Si la sesión, la red o los hosts de video fallan, se usa el sitemap público
+4. Al reproducir un episodio se consulta
+   `/api/episode-source/<bookId>/<serial>?lang=es&refresh=1`, se descifra el
+   payload con AES-256-GCM y se comprueban las URLs: si la cadena trae más de
+   un enlace, `SourceProbe` pide el manifiesto HLS (o 1 KB del MP4) y descarta
+   los que no responden. Después se emiten solo las URLs directas vivas.
+   ExoPlayer reproduce el HLS.
+5. La descarga la gestiona CloudStream: para un enlace `M3U8` usa
+   `downloadHLS`; al ser una media playlist sin variantes, descarga los
+   segmentos `.ts` y los concatena en un MP4.
+6. Si la sesión, la red o los hosts de video fallan, se usa el sitemap público
    (títulos y navegación) y el catálogo demo como último recurso.
 
 ## Compilación
 
 Requisitos: Windows/macOS/Linux, JDK 21, Android SDK 35. En el entorno de
-desarrollo verificado se usa el JDK de Android Studio y una caché de Gradle
-dentro del workspace:
+desarrollo verificado se usa Eclipse Adoptium Temurin 21.0.13+9 y el SDK de
+Android en `C:\Android`:
 
 ```powershell
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"  # o cualquier JDK 21
-$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
+$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot"
+$env:ANDROID_HOME="C:\Android"
 $env:GRADLE_USER_HOME="$PWD\.gradle-home"  # opcional: caché de Gradle dentro del repo
 
 .\gradlew.bat :HDrama:testDebugUnitTest --console=plain
@@ -78,9 +106,8 @@ $env:GRADLE_USER_HOME="$PWD\.gradle-home"  # opcional: caché de Gradle dentro d
 .\gradlew.bat makePluginsJson
 ```
 
-Artefacto: `HDrama/build/HDrama.cs3`
-(tamaño: 123.299 bytes (123 KB); SHA-256:
-7fbcccb77000ab15ccaa81605b5bc4e11762c9777f83d0f2e62101152e1394e4).
+Artefacto: `HDrama/build/HDrama.cs3` (tamaño: 143.227 bytes (140 KB); SHA-256:
+be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d).
 
 Solo puede ejecutarse una compilación a la vez: crear `.build-lock` antes y
 borrarlo después (ver [`Docs/04-compilacion.md`](Docs/04-compilacion.md)).
@@ -112,7 +139,7 @@ directamente en CloudStream. Procedimiento completo en
 ```text
 HDramaProvider (CloudStream MainAPI)
   └── CatalogRepository (prioridad + caché TTL)
-       ├── HdramaCatalogAdapter   (HTML real; WebViewFetcher + parser + fuentes HLS)
+       ├── HdramaCatalogAdapter   (HTML real; fetcher OkHttp + parser + fuentes HLS)
        ├── SitemapCatalogAdapter  (respaldo: sitemaps públicos)
        ├── DemoCatalogAdapter     (diagnóstico: datos sintéticos + MP4/HLS públicos)
        └── AccessCards / ManualHdramaImport (navegación e importación)
@@ -121,8 +148,8 @@ HDramaProvider (CloudStream MainAPI)
 
 - `catalog/`: secciones, rutas reales, adaptadores y repositorio.
 - `parser/`: jsoup + JSON-LD, contrato de selectores y fixtures reales.
-- `network/`: WebViewFetcher (WebView del sistema), fallback CloudflareKiller, sitemaps, allowlist y caché.
-- `sources/`: cifrado AES-256-GCM y cliente de la API de fuentes.
+- `network/`: sesión Cloudflare (`CloudflareSession`, `WebViewCloudflareSession`), fetcher OkHttp (`HdramaHttpFetcher`), respaldo WebView, allowlist, sitemaps y caché.
+- `sources/`: cifrado AES-256-GCM, cliente de la API de fuentes y sonda de disponibilidad de enlaces.
 - `models/`: dominio puro, sin tipos de CloudStream.
 - `player/`: resolución de HLS/MP4 y estados.
 - `utils/`: normalización Unicode, URLs, IDs de episodio y diagnóstico.
@@ -131,12 +158,20 @@ Detalle en [`Docs/03-arquitectura.md`](Docs/03-arquitectura.md).
 
 ## Limitaciones
 
-- La primera petición puede tardar mientras se resuelve el Cloudflare Managed
-  Challenge en el WebView; sin sesión se usa el respaldo por sitemaps.
+- La primera petición de una sesión puede tardar mientras se resuelve el
+  Cloudflare Managed Challenge en el WebView (hasta 75 s en equipos lentos); si
+  el challenge no se resuelve, el catálogo cae a los sitemaps y las fichas a
+  navegación.
 - Los tokens de video caducan: las fuentes se resuelven al reproducir.
-- Los hosts de video y el proxy espejo son de terceros y pueden fallar o
-  cambiar.
-- El sitio puede cambiar rutas, selectores o la clave de cifrado sin aviso.
+- Los hosts de video son de terceros y pueden fallar o cambiar; el proxy espejo
+  anterior ya no existe y el plugin emite solo URLs directas.
+- La comprobación de enlaces añade una petición por URL cuando la cadena trae
+  más de un video; si el host bloquea esa sonda, se entregan igualmente las
+  URLs originales para que el player muestre el error real.
+- El sitio puede cambiar rutas, selectores, la clave de cifrado o el formato del
+  `bookId` sin aviso.
+- La descarga depende de que CloudStream pueda leer el playlist y los segmentos
+  `.ts`; no se ha verificado en hardware físico.
 - No se ha probado en hardware físico (Galaxy Z Fold8) ni en redes móviles.
 
 Detalle en [`Docs/08-limitaciones.md`](Docs/08-limitaciones.md).

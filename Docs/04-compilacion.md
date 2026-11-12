@@ -1,22 +1,23 @@
-# Compilación (versión 2)
+# Compilación (versión 3)
 
-Fecha de ejecución: 2026-11-11, America/Santo_Domingo.
+Fecha de ejecución: 2026-11-12, America/Santo_Domingo.
 
 Este documento recoge el entorno y los comandos con los que se compila y prueba
-el plugin **v2** (`HDrama/build.gradle.kts` fija `version = 2`). El build se
-ejecuta en Windows con el JDK que trae Android Studio y una caché de Gradle
-dentro del propio workspace.
+el plugin **v3** (`HDrama/build.gradle.kts` fija `version = 3`). El build se
+ejecuta en Windows con Eclipse Adoptium Temurin 21.0.13+9 y el SDK de Android en
+`C:\Android`.
 
 ## 1. Entorno de compilación
 
 | Componente | Valor |
 |---|---|
 | Sistema | Windows 11 Pro x64 (build 10.0.26200) |
-| JDK | Android Studio JBR 21.0.6 (JetBrains) |
-| `JAVA_HOME` | `C:\Program Files\Android\Android Studio\jbr` |
-| `ANDROID_HOME` | `C:\Users\elbac\AppData\Local\Android\Sdk` |
-| Plataformas SDK | `android-33`, `android-34`, `android-35`, `android-36` |
-| Build tools | `35.0.0`, `35.0.1`, `36.0.0` |
+| JDK | Eclipse Adoptium Temurin 21.0.13+9 (build 21.0.13+9-LTS) |
+| `JAVA_HOME` | `C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot` |
+| `ANDROID_HOME` | `C:\Android` |
+| `sdk.dir` (`local.properties`) | `C:\Android` |
+| Plataformas SDK | `android-34`, `android-35`, `android-36`, `android-36.1` (y antiguas `android-14`, `android-15`, `android-21`, `android-22`) |
+| Build tools | `34.0.0`, `35.0.0`, `36.0.0` |
 | `GRADLE_USER_HOME` | `<raíz del repo>\.gradle-home` |
 | Gradle wrapper | 8.12 |
 | Android Gradle Plugin | 8.7.3 |
@@ -26,11 +27,17 @@ dentro del propio workspace.
 | JVM target | 1.8 |
 | CloudStream de referencia | `pre-release` (2026-11-09, probado con 4.9.1) |
 | `apiVersion` del plugin | 1 |
-| Versión del plugin | 2 |
+| Versión del plugin | 3 |
 
-`GRADLE_USER_HOME` **debe** apuntar a un directorio dentro del workspace: el
-entorno de ejecución del agente bloquea la escritura en
-`C:\Users\<usuario>\.gradle`. La caché `.gradle-home/` está en `.gitignore`.
+El `JAVA_HOME` heredado del equipo puede apuntar a una ruta inexistente
+(`C:\Program Files\Android\openjdk\jdk-21.0.8`); por eso cada sesión fija el JDK
+de Adoptium de forma explícita antes de compilar.
+
+En las compilaciones verificadas se usó una caché de Gradle dentro del
+workspace (`<raíz del repo>\.gradle-home`), que está en `.gitignore`; también
+vale la caché global del usuario. Si el entorno bloquea la escritura en
+`C:\Users\<usuario>\.gradle`, basta con fijar `GRADLE_USER_HOME` dentro del
+workspace como en los comandos de la sección 3.
 
 ### Dependencias del build
 
@@ -38,11 +45,13 @@ entorno de ejecución del agente bloquea la escritura en
 - `org.jsoup:jsoup:1.18.3`: parseo de HTML.
 - `org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2`.
 - `com.github.Blatzar:NiceHttp:0.4.11`: cliente HTTP que usa la propia app
-  (`app.get`, `NiceResponse`) y que aporta `okhttp3` para los interceptores de
-  Cloudflare (`WebViewFetcher`; `CloudflareKiller` como respaldo).
+  (`app.get`, `NiceResponse`) y que aporta `okhttp3`; base del fetcher principal
+  `HdramaHttpFetcher` y del respaldo `CloudstreamWebFetcher`
+  (`CloudflareKiller`).
 - `org.json:json:20240303` (solo pruebas): en Android `org.json` lo aporta el
   framework, pero en las pruebas JVM el `android.jar` devuelve valores por
   defecto.
+- `junit:junit:4.13.2` y `org.jetbrains.kotlin:kotlin-test:2.3.0` (pruebas).
 
 `gradle.properties` fija `kotlin.compiler.execution.strategy=in-process`: el
 daemon de Kotlin no arranca en algunos entornos de CI o areneros.
@@ -66,8 +75,8 @@ try {
 
 ```powershell
 # Desde la raíz del repositorio
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"  # o cualquier JDK 21
-$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
+$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-21.0.13.9-hotspot"
+$env:ANDROID_HOME="C:\Android"
 $env:GRADLE_USER_HOME="$PWD\.gradle-home"  # opcional: caché dentro del repo
 
 # Pruebas unitarias JVM
@@ -99,15 +108,16 @@ Created ...\build\plugins.json
 BUILD SUCCESSFUL
 ```
 
-Total de pruebas de la suite: **98 pruebas unitarias en 16 suites**
-(0 fallos esperados; ver [`05-pruebas.md`](05-pruebas.md)).
+Total de pruebas de la suite: **117 pruebas unitarias en
+18 suites** (0 fallos esperados; ver
+[`05-pruebas.md`](05-pruebas.md)).
 
 ### Artefactos
 
 | Artefacto | Ruta | Tamaño | SHA-256 |
 |---|---|---|---|
-| Plugin | `HDrama/build/HDrama.cs3` | 123.299 bytes (123 KB) | 7fbcccb77000ab15ccaa81605b5bc4e11762c9777f83d0f2e62101152e1394e4 |
-| Índice | `build/plugins.json` | 761 bytes | — |
+| Plugin | `HDrama/build/HDrama.cs3` | 143.227 bytes (140 KB) | be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d |
+| Índice | `build/plugins.json` | — | — |
 
 El `.cs3` contiene:
 
@@ -116,7 +126,7 @@ manifest.json
 classes.dex
 ```
 
-El `manifest.json` generado declara `version: 2`, `name: "HDrama"` y
+El `manifest.json` generado declara `version: 3`, `name: "HDrama"` y
 `pluginClassName: "com.hdrama.HDramaPlugin"`.
 
 ## 5. Advertencias
@@ -135,7 +145,8 @@ documentan para futuras actualizaciones de AGP/Kotlin (ver
 
 ## 6. Reproducibilidad
 
-- El wrapper fija Gradle 8.12 con checksum en `gradle-wrapper.properties`.
+- El wrapper fija Gradle 8.12 (`distributionUrl` en
+  `gradle-wrapper.properties`).
 - AGP, Kotlin, SDK y versión del plugin están fijados en `build.gradle.kts` y
   `HDrama/build.gradle.kts`.
 - `cloudstream("com.lagradost:cloudstream3:pre-release")` descarga la API del
@@ -155,9 +166,7 @@ sube los artefactos y publica `HDrama.cs3`, `plugins.json`, `repo.json` y
 release.
 
 La ejecución remota requiere que **GitHub Actions esté habilitado** en el
-repositorio. Estado en la verificación local:
-Las GitHub Actions están habilitadas: el workflow `Build plugin` ejecuta
-pruebas, compila el `.cs3`, publica la rama `builds` y adjunta el artefacto en
-cada release.
-La compilación local con los comandos de este documento es la vía de entrega
-verificada.
+repositorio. Estado en la verificación local: las GitHub Actions están
+habilitadas y el workflow `Build plugin` ejecuta pruebas, compila el `.cs3`,
+publica la rama `builds` y adjunta el artefacto en cada release. La compilación
+local con los comandos de este documento es la vía de entrega verificada.
