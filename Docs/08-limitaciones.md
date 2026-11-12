@@ -100,9 +100,9 @@ navegación.
   credenciales de GitHub.
 - La instalación verificada es local: copiar `HDrama.cs3` a
   `/sdcard/Cloudstream3/plugins/` o usar ADB.
-- El workflow de GitHub Actions está preparado para publicar en la rama
-  `builds`, pero su ejecución remota requiere Actions habilitado (habilitadas
-  desde la v1.1.0).
+- El workflow de GitHub Actions publica en la rama `builds` y adjunta el `.cs3`
+  a cada release (comprobado en la v1.2.0: `plugins.json` con
+  `fileHash: sha256-be21cdb8…` y `HDrama.cs3` de 143.227 bytes adjunto).
 
 ## 6. Hardware físico no disponible
 
@@ -110,9 +110,9 @@ navegación.
   relación de aspecto 9:16 los gestiona CloudStream/ExoPlayer; el plugin no
   impone orientación ni recorta el video, pero no se ha verificado en ese
   hardware.
-- La reproducción y la descarga completas en emulador se cierran en la entrega
-  v1.2.0; la verificación en hardware físico y en redes móviles queda para una
-  sesión con dispositivo.
+- La reproducción y la descarga completas se verificaron en emulador (Android
+  15, CloudStream 4.9.1); la verificación en hardware físico y en redes
+  móviles queda para una sesión con dispositivo.
 - Las pruebas instrumentadas de UI (Espresso/UIAutomator) no están
   automatizadas.
 

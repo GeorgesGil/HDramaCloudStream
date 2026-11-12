@@ -125,14 +125,16 @@ Total de pruebas de la suite: 117 pruebas unitarias en
   (`VideoDownloadManager.downloadHLS` → `M3u8Helper2.hslLazy` →
   `HlsPlaylistParser.parse`), que con la media playlist actual descarga los
   segmentos `.ts` y los concatena en un MP4.
-- Verificación parcial en emulador Android 15 con CloudStream 4.9.1 y el
-  plugin v3: log `Challenge resuelto; cookie de sesion actualizada`, catálogo
-  real con portada y banner "Encadenadas", y ficha con 64 episodios
-  (`bookId=7acef74a-7aee-4d29-bbad-8c708d967d1e`). El primer intento de
-  challenge agotó los 45 s del timeout antiguo y el segundo resolvió a los
-  ~44 s; con el timeout actual de 75 s se espera que el primero baste.
-- La evidencia final de reproducción y descarga completas se cierra en la
-  entrega de la v1.2.0.
+- Verificación en emulador Android 15 con CloudStream 4.9.1 y el plugin v3:
+  log `Challenge resuelto; cookie de sesion actualizada`, catálogo real con
+  póster, búsqueda real, ficha con 125 episodios y reproducción completa
+  (log `loadExo` → `Rendered first frame`).
+- Descarga verificada en el mismo emulador: episodio 1 de una serie real en
+  `/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4`
+  con 26.160.200 bytes, cola de descargas finalizada.
+- Entrega automatizada: el workflow `Build plugin` ejecutó las 117 pruebas,
+  compiló el `.cs3`, actualizó la rama `builds` y la release v1.2.0 adjunta el
+  artefacto con el mismo SHA-256 que la compilación local.
 
 ## 6. Funciones operativas
 
@@ -186,6 +188,11 @@ HDrama/build/HDrama.cs3
 La copia de entrega se publica en la rama `builds` y en la release v1.2.0:
 
 - Release: <https://github.com/GeorgesGil/HDramaCloudStream/releases/tag/v1.2.0>
+  (adjunta `HDrama.cs3` de 143.227 bytes, SHA-256
+  `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`, y
+  `plugins.json` con `version: 3`).
+- Rama `builds` actualizada por el workflow `Build plugin` (`plugins.json` con
+  `fileHash: sha256-be21cdb8…`).
 - Repositorio de CloudStream:
   `https://raw.githubusercontent.com/GeorgesGil/HDramaCloudStream/builds/repo.json`
 
@@ -207,13 +214,11 @@ Detalle en [`06-instalacion.md`](06-instalacion.md).
 
 ## 10. Mejoras recomendadas
 
-1. Cerrar la evidencia de reproducción y descarga completas en el emulador y
-   adjuntarla a la entrega v1.2.0.
-2. Probar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
+1. Probar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
    móviles.
-3. Instalar desde `repo.json` público en un dispositivo limpio y verificar la
+2. Instalar desde `repo.json` público en un dispositivo limpio y verificar la
    actualización automática del plugin.
-4. Mantener actualizados los selectores del parser, los vectores de cifrado y
+3. Mantener actualizados los selectores del parser, los vectores de cifrado y
    el tratamiento del `bookId` si el sitio cambia.
-5. Actualizar AGP/Kotlin juntos para eliminar las advertencias de metadata D8.
+4. Actualizar AGP/Kotlin juntos para eliminar las advertencias de metadata D8.
 6. Añadir pruebas instrumentadas de UI y de carga del plugin.

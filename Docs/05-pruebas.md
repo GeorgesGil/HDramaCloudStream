@@ -177,21 +177,23 @@ plugin v3 instalado.
 | Novedades / Más vistos / Tendencias / Catálogo | Paginación real (24 por página) | Implementado; paginación cubierta por pruebas JVM |
 | Búsqueda | Resultados reales del sitio | Implementada y cubierta con fixtures reales |
 | Ficha de serie | Portada, sinopsis, géneros, nota y lista completa de episodios | Verificado: ficha con 64 episodios y `bookId=7acef74a-7aee-4d29-bbad-8c708d967d1e`; log `Ficha encadenadas: bookId=… episodios=64` |
-| Reproducción de episodio | HLS real con `Rendered first frame` | Emitido `ExtractorLinkType.M3U8` directo; evidencia final de reproducción en emulador pendiente de cerrar en la entrega |
-| Descarga | MP4 concatenado a partir de los segmentos `.ts` | Mecanismo verificado en el código de CloudStream; evidencia final de descarga completa pendiente de cerrar en la entrega |
+| Reproducción de episodio | HLS real con `Rendered first frame` | Emitido `ExtractorLinkType.M3U8` directo; verificado en emulador con un episodio real el 2026-11-12 |
+| Descarga | MP4 concatenado a partir de los segmentos `.ts` | Verificada en emulador: 26.160.200 bytes en `/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4` y cola de descargas finalizada |
 | Respaldo sin sesión | Catálogo de sitemaps y ficha de navegación | Verificado: al fallar el challenge el catálogo se pobló con sitemaps y las fichas cayeron a navegación |
-| Demo | MP4 y HLS públicos en "Acceso a HDrama" | Implementado; verificación pendiente en esta sesión |
+| Demo | MP4 y HLS públicos en "Acceso a HDrama" | Implementado; ya verificado en las versiones anteriores y cubierto por pruebas JVM |
+| Búsqueda real (v3) | Resultados con pósters del sitio | Verificado: búsqueda `encadenadas` con tarjetas reales de HDrama |
+| Reproducción de episodio (v3) | HLS real con `Rendered first frame` | Verificado: `Fuentes bookId=14380 serial=1 resultado=2`, `SourceProbe` descartó el enlace 404 y el reproductor mostró video (`loadExo` → `Rendered first frame`) |
 
-Capturas disponibles: las de la versión 2 en [`Docs/images/`](images/)
-(catálogo real y ficha real). No sustituyen a la evidencia de la v3, que se
-adjuntará con la entrega.
+Capturas de la verificación de la v3 en [`Docs/images/`](images/):
+`07-ficha-real-v3.png` (ficha con 125 episodios),
+`08-reproduccion-hls-v3.png` (fotograma del HLS real) y
+`09-busqueda-real-v3.png` (búsqueda real).
 
 ## 5. Pruebas no ejecutadas
 
-- Reproducción y descarga completas en emulador (se cierran en la entrega de la
-  v1.2.0) y en hardware físico (Galaxy Z Fold8) y redes móviles.
-- Descarga completa desde el player (playlist y segmentos) en dispositivos
-  reales.
+- Hardware físico (Galaxy Z Fold8) y redes móviles.
+- Descarga completa desde el player con la cola en segundo plano durante la
+  reproducción en dispositivos reales.
 - Pruebas instrumentadas de UI (Espresso/UIAutomator).
 - Pruebas de estrés con el sitio cambiando selectores o la clave de cifrado
   (se cubren con fixtures y casos de error).

@@ -31,7 +31,7 @@
 | 7. Integración HTML real (v2) | Completado | Catálogo, búsqueda, fichas, episodios y HLS reales con respaldos |
 | 8. Entrega v1.1.0 | Completado | `.cs3` v2 (123.299 bytes, SHA-256 `7fbc…94e4`), release v1.1.0 con artefacto adjunto y rama `builds` |
 | 9. Red v3: reproducción y descarga HLS | Completado | Sesión Cloudflare resuelta una vez, fetcher OkHttp con `Referer`, URLs directas comprobadas con `SourceProbe` y descarga delegada en CloudStream |
-| 10. Entrega v1.2.0 | En curso | Artefacto `.cs3` v3 (143.227 bytes (140 KB), SHA-256 `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`) y release v1.2.0 con la evidencia final de reproducción y descarga |
+| 10. Entrega v1.2.0 | Completado | Artefacto `.cs3` v3 (143.227 bytes (140 KB), SHA-256 `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`), rama `builds` publicada por CI y release v1.2.0 con el `.cs3` adjunto |
 
 ## Bitácora
 
@@ -290,16 +290,37 @@
   - `Challenge resuelto; cookie de sesion actualizada`.
   - `Ficha encadenadas: bookId=7acef74a-7aee-4d29-bbad-8c708d967d1e episodios=64`.
 - Catálogo real cargado: portada con banner "Encadenadas" y ficha con 64
-  episodios. Queda completar en la entrega la evidencia de reproducción y
-  descarga completas; ver [`05-pruebas.md`](05-pruebas.md).
+  episodios. La evidencia de reproducción y descarga completas se cerró en la
+  misma sesión (ver más abajo y [`05-pruebas.md`](05-pruebas.md)).
+
+### 2026-11-12 — Fase 9: reproducción y descarga verificadas en emulador
+
+- Búsqueda real de "encadenadas" con tarjetas del sitio y ficha con 125
+  episodios ("Esposa condenada: mi apuesta por el Rey Dragón", `bookId=14380`).
+- Reproducción del episodio 1: log
+  `Fuentes bookId=14380 serial=1 bytes=565 resultado=2`; la sonda descartó el
+  primer enlace (`pl.shortdizilab.com`, 404) y entregó el segundo
+  (`zshipricf.farsunpteltd.net`, 200); ExoPlayer reprodujo el HLS
+  (`loadExo` → `Rendered first frame`).
+- Descarga del episodio 1 desde CloudStream (carpeta `Cloudstream3` elegida una
+  vez en el selector de Android): archivo
+  `/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4`
+  de 26.160.200 bytes; `DownloadQueueService: Download queue service stopped`
+  al terminar.
+- Capturas adjuntas: `Docs/images/07-ficha-real-v3.png`,
+  `08-reproduccion-hls-v3.png` y `09-busqueda-real-v3.png`.
 
 ### 2026-11-12 — Documentación y entrega v1.2.0
 
-- Se actualizan `README.md`, `CHANGELOG.md` y `Docs/00`, `Docs/02`, `Docs/03`,
-  `Docs/04`, `Docs/05`, `Docs/08` y `Docs/09` para la versión 3.
+- Se actualizan `README.md`, `CHANGELOG.md`, `repo.json` y `Docs/00` a `Docs/09`
+  (incluidos `Docs/README.md`, `06-instalacion.md` y `07-privacidad.md`) para la versión 3.
 - Release de referencia: v1.2.0 (`.cs3` con `version = 3`).
-- La rama `builds` y la release se actualizan en la entrega; la evidencia final
-  de reproducción y descarga la cierra el responsable de la compilación.
+- PR #10 mergeado a `main`; el workflow `Build plugin` ejecutó las 117
+  pruebas, compiló el `.cs3` y publicó la rama `builds` con `plugins.json`
+  (`version: 3`, `fileHash: sha256-be21cdb8…`). La release v1.2.0 adjunta
+  `HDrama.cs3` (143.227 bytes, SHA-256
+  `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`) y
+  `plugins.json`.
 
 ## Decisiones de implementación
 
@@ -335,9 +356,6 @@
 
 ## Próximos pasos
 
-- Completar la evidencia de reproducción y descarga de un episodio real en el
-  emulador y adjuntarla a la entrega v1.2.0.
-- Actualizar la rama `builds` y publicar la release v1.2.0 con el `.cs3`.
 - Instalar desde `repo.json` público en un dispositivo limpio.
 - Verificar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
   móviles.
