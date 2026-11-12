@@ -1,6 +1,6 @@
 {
     "name": "HDramaCloudStream",
-    "description": "Extension HDrama para CloudStream. Catalogo real desde sitemaps publicos, navegacion al sitio original y modo demo. Sin evasión de Cloudflare ni DRM.",
+    "description": "Extension HDrama para CloudStream. Catalogo real desde sitemaps publicos, navegacion al sitio original y modo demo.",
     "manifestVersion": 1,
     "pluginLists": [
         "https://raw.githubusercontent.com/GeorgesGil/HDramaCloudStream/builds/plugins.json"

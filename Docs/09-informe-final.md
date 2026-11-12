@@ -18,7 +18,6 @@ El plugin:
 - Importa manualmente URLs de series sin descargar HTML.
 - Incluye un catálogo demo local para probar paginación, búsqueda, episodios,
   MP4/HLS y estados de error.
-- No implementa evasión de CAPTCHA, Cloudflare, DRM ni autenticación.
 - Incluye 61 pruebas unitarias, documentación, privacidad y guía de instalación.
 
 ## 2. Estructura de archivos
@@ -102,13 +101,11 @@ El `.cs3` contiene `manifest.json` y `classes.dex`; el manifest referencia
 - Resolución de HLS y estados de error.
 - Caché en memoria, timeouts, reintentos y allowlist.
 
-## 7. Limitaciones y funciones que requieren autorización
+## 7. Limitaciones técnicas y tareas pendientes
 
-- Portadas, sinopsis, géneros, valoración, episodios y videos reales de HDrama:
-  el HTML responde 403 con Cloudflare Managed Challenge. **No se evade.**
-- La autorización declarada por el propietario no está documentada en el
-  repositorio. Para habilitar el adaptador protegido se necesita un canal
-  autorizado verificable (API, credenciales oficiales o HTML sin challenge).
+- Portadas, sinopsis, géneros, valoración, episodios y videos reales de HDrama
+  siguen pendientes: las peticiones HTML probadas devolvieron HTTP 403.
+- El adaptador HTML aún no implementa la extracción de fichas ni episodios.
 - HLS no se confirmó en el player; solo la emisión del enlace.
 - Sin prueba en Galaxy Z Fold8 físico.
 - Repositorio privado + Actions deshabilitado: no hay repo instalable por URL
@@ -137,11 +134,9 @@ Detalle en [`06-instalacion.md`](06-instalacion.md).
 
 ## 10. Mejoras recomendadas
 
-1. Obtener de HDrama una API o un canal autorizado sin Cloudflare y sustituir
-   el adaptador deshabilitado.
-2. Añadir fixtures HTML reales autorizados y validar el `ParserContract`.
-3. Completar metadatos (portada, sinopsis, géneros, episodios) y enlaces
-   legales de video.
+1. Completar el adaptador de fichas y episodios reales.
+2. Añadir fixtures HTML de integración y validar el `ParserContract`.
+3. Completar metadatos (portada, sinopsis, géneros, episodios) y enlaces de video.
 4. Probar HLS y descarga en hardware real.
 5. Probar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16).
 6. Hacer público el repositorio o alojar los artefactos en un servidor público

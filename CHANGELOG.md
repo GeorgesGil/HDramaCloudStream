@@ -30,10 +30,8 @@ Todas las fechas en ISO 8601.
 
 ### Limitado / pendiente
 
-- El HTML de HDrama responde 403 con Cloudflare Managed Challenge. No se
-  implementa evasión; no hay portadas, sinopsis, episodios ni enlaces reales.
-- La integración directa con HTML protegido requiere autorización verificable y
-  un canal sin challenge.
+- El HTML de HDrama devuelve HTTP 403 con Cloudflare Managed Challenge; el
+  adaptador de fichas y episodios reales todavía no está implementado.
 - El repositorio es privado; no sirve como repositorio instalable por URL.
 - HLS no se confirmó en el player; sí la emisión del enlace.
 - Sin prueba en Galaxy Z Fold8 físico.

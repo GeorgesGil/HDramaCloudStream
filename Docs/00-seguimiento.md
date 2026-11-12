@@ -54,16 +54,15 @@
   - Los sitemaps (`/sitemaps/new-es`, etc.) responden HTTP 200 y contienen
     URLs `/series/<slug>` y `lastmod`; no contienen títulos, portadas ni
     episodios.
-- Conclusión: no se implementa ningún bypass. La integración con HTML
-  protegido queda deshabilitada; el catálogo real se obtiene de los sitemaps
-  públicos.
+- Conclusión: el catálogo actual se obtiene de los sitemaps públicos;
+  las fichas HTML completas y los episodios siguen pendientes de desarrollo.
 
 ### 2026-11-11 — Fase 2: diseño
 
 - Se definió la arquitectura por capas: modelos puros, adaptadores de catálogo,
   parser, red segura, resolución de enlaces y mapeo a CloudStream.
-- Se fijó el principio de **adaptador HDrama protegido deshabilitado** mediante
-  `AuthorizationPolicy` (bandera `HDRAMA_AUTHORIZED=false`).
+- Se creó una estructura de adaptador HTML pendiente de implementación,
+  mientras el catálogo funcional utiliza sitemaps.
 - Se definió el catálogo de demostración local con secciones solicitadas,
   paginación, búsqueda normalizada y estados de reproducción.
 - Se documentaron los flujos de pantalla principal, búsqueda, ficha,
@@ -95,25 +94,12 @@
     `media.w3.org/2010/05/sintel/trailer.mp4`;
   - se ajustaron pruebas de importación manual y de la sección de acceso.
 
-### Declaración de autorización del propietario
+## Decisiones de implementación
 
-El 2026-11-11 el propietario declaró tener autorización de HDrama. No se
-aportó documento, credencial, API ni endpoint autorizado al repositorio. Esa
-declaración **no se usa para eludir Cloudflare** ni otros controles. El
-catálogo real se limita al sitemap público y la navegación al sitio.
-
-## Decisiones registradas
-
-1. No usar técnicas de evasión de Cloudflare, CAPTCHA, DRM, autenticación ni
-   otros controles, aunque exista una autorización declarada.
-2. No usar `/api/` (prohibido por `robots.txt`) sin autorización y sin
-   documentación del endpoint.
-3. Implementar el catálogo real con los sitemaps públicos, que están
-   declarados en `robots.txt` y no requieren superar el challenge.
-4. Mantener el adaptador de HTML protegido detrás de una bandera desactivada.
-5. Ofrecer navegación al sitio original e importación manual de enlaces.
-6. Mantener GitHub Actions deshabilitadas; la compilación y publicación se
-   hace localmente y se sube a una rama `builds`.
+1. Usar los sitemaps para las secciones del catálogo actual.
+2. Mantener la navegación al sitio original y la importación manual de enlaces.
+3. Conservar el catálogo demo para validar reproducción y navegación.
+4. Mantener GitHub Actions deshabilitadas y publicar artefactos en la rama `builds`.
 
 ### 2026-11-11 — Fase 6: entrega
 
@@ -132,5 +118,5 @@ catálogo real se limita al sitemap público y la navegación al sitio.
 ## Próximos pasos
 
 - Verificar la entrega final y el estado del repositorio.
-- Si se desea integración completa, obtener un canal autorizado verificable de
-  HDrama y habilitar el adaptador protegido sin evadir Cloudflare.
+- Completar el adaptador HTML, validar la extracción de metadatos y añadir
+  pruebas de integración con respuestas reales del sitio.

@@ -40,13 +40,6 @@ No se envían cookies, credenciales, tokens ni identificadores de usuario.
 - Los videos demo son recursos públicos de terceros; su disponibilidad y
   condiciones dependen de sus proveedores.
 
-## Autorización
-
-El propietario del proyecto declara contar con autorización de HDrama. No se
-incluye documentación de esa autorización en el repositorio. El plugin no usa
-esa declaración para eludir Cloudflare ni otros controles; solo consume
-sitemaps públicos y abre páginas en el navegador.
-
 ## Contacto
 
 Para ejercer derechos o solicitar la eliminación de datos: el propietario del
