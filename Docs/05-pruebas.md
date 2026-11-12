@@ -94,12 +94,10 @@ La cifra se obtuvo sumando `testsuite.tests` de los XML generados en
 - `PluginInfoTest` fija `VERSION=1` y `API_VERSION=1`.
 - El `.cs3` se inspeccionó manualmente para confirmar `manifest.json`.
 
-### 13. Autorización
+### 13. Adaptador HTML pendiente
 
-- `HdramaCatalogAdapterTest` confirma que el catálogo/búsqueda protegidos
-  lanzan `UnauthorizedAccessException` y que la importación manual no descarga
-  HTML.
-- La bandera `HDRAMA_AUTHORIZED` permanece en `false`.
+- `HdramaCatalogAdapterTest` comprueba que catálogo y búsqueda informan que
+  están sin implementar, y que la importación manual funciona sin descargar HTML.
 
 ### 14. Sitemaps reales
 
@@ -143,4 +141,3 @@ Capturas en [`Docs/images/`](images/):
   parser).
 - Pruebas instrumentadas (Espresso/UIAutomator) automatizadas.
 - Pruebas contra HTML real de HDrama (bloqueado por Cloudflare).
-- DRM, autenticación o contenido protegido: fuera de alcance.

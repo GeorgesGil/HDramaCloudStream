@@ -7,28 +7,24 @@ Cualquier cambio posterior debe reflejarse aquí y en `CHANGELOG.md`.
 
 La implementación añadió un **catálogo real desde los sitemaps públicos**
 (`SitemapCatalogAdapter`, `SitemapClient`, `SitemapParser`). Es la única
-integración activa con HDrama: no descarga HTML protegido ni intenta resolver
-Cloudflare. El catálogo demo queda como modo de diagnóstico para probar el
-player y los estados.
+integración activa con HDrama en la versión actual. El catálogo demo sirve
+para comprobar el player y sus estados.
 
-El adaptador `HdramaCatalogAdapter` que usaría HTML sigue deshabilitado. La
-autorización declarada por el propietario no se usa para eludir controles.
+El adaptador `HdramaCatalogAdapter` conserva métodos pendientes de implementar
+para la lectura y extracción de fichas HTML.
 
-## 1. Restricciones de diseño
+## 1. Criterios técnicos
 
-1. **No evadir controles de acceso.** El HTML de HDrama está detrás de un
-   Cloudflare Managed Challenge (HTTP 403). No se implementa ningún mecanismo
-   de resolución, camuflaje, proxy o cookie.
-2. **No usar `/api/`** de HDrama sin autorización (prohibido por `robots.txt`).
-3. **No inventar endpoints ni selectores.** El adaptador HTML queda
-   deshabilitado y solo se prueba contra fixtures sintéticas que documentan el
-   contrato esperado; no se afirma que correspondan al HTML real.
-4. **Funcionalidad verificable.** El catálogo real usa sitemaps públicos; el
+1. **Datos disponibles.** La integración funcional utiliza los sitemaps; las
+   peticiones HTML probadas devolvieron HTTP 403.
+2. **Contrato de selectores.** Las fixtures actuales son sintéticas y todavía
+   no se han validado contra el HTML real.
+3. **Funcionalidad verificable.** El catálogo real usa sitemaps públicos; el
    catálogo demo permite probar todos los flujos sin tocar HDrama.
-5. **API vigente.** Se usan las funciones factoría actuales
+4. **API vigente.** Se usan las funciones factoría actuales
    (`newHomePageResponse`, `newSearchResponseList`, `newTvSeriesLoadResponse`,
    `newEpisode`, `newExtractorLink`), no constructores deprecados.
-6. **Compatibilidad.** `minSdk 21`, `compileSdk 35`, JVM target 1.8,
+5. **Compatibilidad.** `minSdk 21`, `compileSdk 35`, JVM target 1.8,
    `apiVersion = 1`.
 
 ## 2. Estructura del repositorio
@@ -95,8 +91,7 @@ HDramaCloudStream/
         │           ├── TextNormalizer.kt
         │           ├── UrlUtils.kt
         │           ├── EpisodeId.kt
-        │           ├── Diagnostics.kt
-        │           └── AuthorizationPolicy.kt
+        │           └── Diagnostics.kt
         └── test/
             ├── fixtures/
             │   ├── hdrama-series.html
@@ -114,7 +109,7 @@ HDramaCloudStream/
 CloudStream
    │  MainAPI (HDramaProvider)
    ▼
-CatalogRepository ── AuthorizationPolicy
+CatalogRepository
    │
    ├── SitemapCatalogAdapter   (activo: sitemaps publicos, sin HTML)
    │      └── SitemapClient ── SafeHttpClient ── UrlConnectionHttpTransport
@@ -156,9 +151,9 @@ LinkResolver ── MediaSource (Mp4/Hls/Unavailable/BrowserOnly/Unauthorized)
   respaldo si falla la red.
 - `SitemapCatalogAdapter`: catálogo real desde los sitemaps públicos. Deriva
   títulos de los slugs, no descarga HTML y ofrece fichas de navegación.
-- `HdramaCatalogAdapter`: comprueba `AuthorizationPolicy`. Sin autorización
-  lanza una excepción explícita, sin red. Con autorización (futura) usaría
-  `HdramaHtmlParser` y `HttpTransport`; hoy no se ejecuta.
+- `HdramaCatalogAdapter`: mantiene los puntos de entrada de catálogo y búsqueda
+  como operaciones pendientes; el parser HTML y el transporte quedan preparados
+  para una implementación posterior.
 - `ManualHdramaImport`: convierte una URL de HDrama en una ficha navegable sin
   descargar HTML.
 - `AccessCards`: tarjetas de navegación, importación y prueba de reproducción.
@@ -187,7 +182,7 @@ data class ParserContract(
 ```
 
 El contrato se valida contra fixtures locales. No se asegura que coincida con
-el HTML real de HDrama; queda pendiente de autorización y verificación.
+el HTML real de HDrama; falta validarlo con respuestas representativas.
 
 ### `network`
 
@@ -199,7 +194,7 @@ el HTML real de HDrama; queda pendiente de autorización y verificación.
   - validación de esquema `https`,
   - cancelación por corrutinas,
   - logging sin cookies/tokens/query sensibles.
-- Sin autorización, el adaptador HDrama **no instancia** este cliente.
+- El adaptador HTML actual no instancia este cliente.
 
 ### `player`
 
@@ -225,9 +220,6 @@ el HTML real de HDrama; queda pendiente de autorización y verificación.
 - `UrlUtils`: normalización de esquema/host/path, resolución relativa,
   validación de dominio, extracción de slug.
 - `Diagnostics`: mensajes de error seguros y redacción de datos sensibles.
-- `AuthorizationPolicy`: estado `NOT_GRANTED` por defecto, basado en
-  `BuildConfig.HDRAMA_AUTHORIZED` (false). Documenta cómo cambiarlo solo con
-  autorización escrita.
 
 ## 4. Flujos
 
@@ -255,8 +247,8 @@ Géneros, Recomendaciones.
 1. `load(url)` acepta IDs internos (`hdrama-demo://series/<id>`), URLs de
    HDrama (`https://es.hdrama.net/series/<slug>`) o slugs.
 2. Para demo: metadatos completos y episodios ordenados numéricamente.
-3. Para URL de HDrama sin autorización: ficha mínima con título derivado del
-   slug, aviso de autorización y URL original para navegador. No hay red.
+3. Para URL de HDrama: ficha mínima con título derivado del slug y URL
+   original para abrir en el navegador, sin extraer HTML de la ficha.
 4. Series relacionadas si el adaptador las aporta.
 
 ### Reproducción
@@ -312,7 +304,6 @@ probará en emulador y se documentará la limitación.
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
 | Cloudflare bloquea HTML | Integración real imposible | Adaptador deshabilitado; navegador/demo |
-| Sin autorización de HDrama | No publicable como integración real | Bandera explícita y docs |
 | JitPack/Gradle plugin no resuelve | No compila | Probar early; fallback a stubs locales |
 | Repo privado no sirve repo.json | Instalación por URL no funciona | `.cs3` local/ADB; documentar |
 | Actions deshabilitadas | Sin CI | Build local reproducible + workflow listo |
