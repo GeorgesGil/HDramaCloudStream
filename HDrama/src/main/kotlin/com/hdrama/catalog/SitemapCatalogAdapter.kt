@@ -15,8 +15,8 @@ import com.hdrama.utils.UrlUtils
  * Catalogo real construido exclusivamente con los sitemaps publicos de HDrama.
  *
  * Aporta titulos (derivados del slug), URLs y orden de novedades/tendencias.
- * No descarga el HTML de las fichas, no extrae posters ni episodios y no
- * intenta resolver Cloudflare. Esos datos requieren un canal autorizado.
+ * Esta implementacion utiliza los sitemaps; la obtencion de metadatos y
+ * episodios desde las fichas HTML esta pendiente.
  */
 class SitemapCatalogAdapter(
     private val client: SitemapSource = SitemapClient(),

@@ -8,10 +8,6 @@ CloudStream 4.9.1. El catálogo real se construye desde los **sitemaps públicos
 de HDrama. Las fichas completas, portadas y episodios del sitio no están
 disponibles porque su HTML responde con un Cloudflare Managed Challenge.
 
-> No se implementan evasiones de CAPTCHA, Cloudflare, DRM, autenticación ni
-> controles de acceso. Cualquier acceso autorizado debe llegar por una API o un
-> canal oficial, no por sortear la protección.
-
 ## Qué funciona
 
 | Función | Estado |
@@ -24,7 +20,7 @@ disponibles porque su HTML responde con un Cloudflare Managed Challenge.
 | Reproducción MP4 1080p en el player de CloudStream | ✅ `Rendered first frame` |
 | Emisión de HLS (`ExtractorLinkType.M3U8`) | ✅ implementada y probada a nivel de resolución |
 | Estados de error diferenciados | ✅ |
-| Subtítulos | ✅ soportados si la fuente los aporta; sin fuente real autorizada |
+| Subtítulos | ✅ soportados si la fuente los aporta; sin fuente real disponible |
 | Favoritos, historial, continuar viendo, calidad, pantalla completa | ✅ nativos de CloudStream |
 | 61 pruebas unitarias | ✅ 0 fallos |
 
@@ -83,7 +79,7 @@ HDramaProvider (CloudStream MainAPI)
   └── CatalogRepository
        ├── SitemapCatalogAdapter   (catálogo real, sitemaps públicos)
        ├── DemoCatalogAdapter      (datos sintéticos + videos públicos)
-       └── HdramaCatalogAdapter    (HTML protegido: deshabilitado)
+       └── HdramaCatalogAdapter    (módulo HTML pendiente)
   └── LinkResolver → ExtractorLink
 ```
 
@@ -92,7 +88,7 @@ HDramaProvider (CloudStream MainAPI)
   contra HTML real).
 - `network/`: allowlist, timeouts, reintentos, caché TTL, sitemaps.
 - `player/`: resolución de MP4/HLS y estados.
-- `utils/`: normalización Unicode, URLs, autorización, diagnóstico.
+- `utils/`: normalización Unicode, URLs, diagnóstico.
 
 ## Documentación
 
@@ -106,14 +102,6 @@ HDramaProvider (CloudStream MainAPI)
 - [Privacidad](Docs/07-privacidad.md)
 - [Limitaciones](Docs/08-limitaciones.md)
 - [Informe final](Docs/09-informe-final.md)
-
-## Autorización
-
-El propietario declara tener autorización de HDrama (2026-11-11). No se incluye
-prueba documental en el repositorio. Esa declaración no se usa para eludir
-Cloudflare; solo se consume el sitemap público y se abre el sitio en el
-navegador. Para habilitar fichas/episodios reales hace falta un canal
-autorizado verificable (API, credenciales oficiales o HTML sin challenge).
 
 ## Licencia
 

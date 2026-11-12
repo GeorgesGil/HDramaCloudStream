@@ -1,12 +1,8 @@
 package com.hdrama.catalog
 
-import com.hdrama.utils.AuthorizationPolicy
-import com.hdrama.utils.AuthorizationStatus
-import com.hdrama.utils.UnauthorizedAccessException
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -15,22 +11,16 @@ class HdramaCatalogAdapterTest {
     private val adapter = HdramaCatalogAdapter()
 
     @Test
-    fun `autorizacion deshabilitada por defecto`() {
-        assertFalse(AuthorizationPolicy.isAuthorized())
-        assertEquals(AuthorizationStatus.NOT_GRANTED, AuthorizationPolicy.status())
-    }
-
-    @Test
-    fun `catalogo y busqueda lanzan error explicito sin autorizacion`(): Unit = runBlocking {
+    fun `catalogo y busqueda informan funciones pendientes`(): Unit = runBlocking {
         val sectionError = runCatching { adapter.section(CatalogSection.NOVEDADES, 1) }.exceptionOrNull()
-        assertIs<UnauthorizedAccessException>(sectionError)
+        assertIs<UnsupportedOperationException>(sectionError)
 
         val searchError = runCatching { adapter.search("corazon", 1) }.exceptionOrNull()
-        assertIs<UnauthorizedAccessException>(searchError)
+        assertIs<UnsupportedOperationException>(searchError)
     }
 
     @Test
-    fun `importacion manual no descarga html ni requiere autorizacion`(): Unit = runBlocking {
+    fun `importacion manual crea ficha de navegacion sin descargar html`(): Unit = runBlocking {
         val series = adapter.load("https://es.hdrama.net/series/corazon-de-neon")
         assertNotNull(series)
         assertTrue(series.browserOnly)
@@ -42,7 +32,7 @@ class HdramaCatalogAdapterTest {
     }
 
     @Test
-    fun `la nota de autorizacion es explicita`() {
-        assertTrue(adapter.authorizationNote().contains("autorizacion"))
+    fun `la nota de implementacion informa el estado actual`() {
+        assertTrue(adapter.implementationNote().contains("pendiente"))
     }
 }

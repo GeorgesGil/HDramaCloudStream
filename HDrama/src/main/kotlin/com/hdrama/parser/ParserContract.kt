@@ -6,8 +6,7 @@ package com.hdrama.parser
  * IMPORTANTE: este contrato es una hipotesis de trabajo derivada de la
  * estructura publica observada y de las fixtures sinteticas. **No ha sido
  * validado contra el HTML real** porque el sitio responde con un Cloudflare
- * Managed Challenge (HTTP 403). Solo debe habilitarse con autorizacion y
- * fixtures reales autorizados.
+ * Managed Challenge (HTTP 403). Se requiere validar las fixtures con HTML real.
  */
 data class ParserContract(
     val seriesItem: String = "article.serie-card, article.serie, .serie-card, .item",

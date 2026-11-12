@@ -11,7 +11,7 @@ object AccessCards {
             slug = "acceso-hdrama",
             title = "HDrama: abrir sitio oficial",
             synopsis = "Abre es.hdrama.net en el navegador de Android. " +
-                "La ficha completa y los episodios requieren un canal de acceso autorizado.",
+                "La ficha completa y los episodios aun no se muestran en este modo.",
             genres = listOf("Navegacion"),
             source = "Navegacion",
             language = "es",

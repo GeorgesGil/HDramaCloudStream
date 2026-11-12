@@ -16,12 +16,11 @@ limitaciones.
 | [05-pruebas.md](05-pruebas.md) | Estrategia y resultados de pruebas (Fase 4/5) |
 | [06-instalacion.md](06-instalacion.md) | Instalación en Android y ADB (Fase 6) |
 | [07-privacidad.md](07-privacidad.md) | Política de privacidad y minimización de datos |
-| [08-limitaciones.md](08-limitaciones.md) | Bloqueos, funciones pendientes de autorización y riesgos |
+| [08-limitaciones.md](08-limitaciones.md) | Limitaciones técnicas, funciones pendientes y riesgos |
 
 ## Convenciones
 
 - Fechas en formato ISO 8601 (`YYYY-MM-DD`), zona `America/Santo_Domingo`.
 - Todo resultado técnico se registra con el comando ejecutado y su salida resumida.
 - No se documenta como "funcional" nada que no haya sido compilado o probado.
-- Los datos de prueba son sintéticos o de dominio público; no se incluyen
-  contenidos ni metadatos extraídos de HDrama sin autorización.
+- Los datos de prueba incluidos actualmente son sintéticos o de dominio público.

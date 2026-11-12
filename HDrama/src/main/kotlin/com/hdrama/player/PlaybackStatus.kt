@@ -6,7 +6,7 @@ enum class PlaybackStatus(val userMessage: String) {
     TEMPORARILY_UNAVAILABLE("Video temporalmente no disponible. Intenta de nuevo mas tarde."),
     UNSUPPORTED_SOURCE("Fuente no compatible con el reproductor de CloudStream."),
     BROWSER_REQUIRED("Este contenido solo puede abrirse en el navegador."),
-    UNAUTHORIZED("Acceso no autorizado. Se requiere autorizacion expresa de HDrama."),
+    UNAUTHORIZED("No se pudo acceder a esta fuente."),
 }
 
 enum class LinkType { MP4, HLS, BROWSER }

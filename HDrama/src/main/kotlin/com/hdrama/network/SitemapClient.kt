@@ -10,8 +10,8 @@ interface SitemapSource {
 /**
  * Cliente de sitemaps publicos de HDrama.
  *
- * Solo descarga XML de sitemaps declarados en robots.txt. No solicita HTML de
- * series ni intenta superar Cloudflare. Cachea el snapshot durante 15 minutos.
+ * Descarga XML de sitemaps para obtener URLs de series y guarda el snapshot
+ * en cache durante 15 minutos.
  */
 class SitemapClient(
     private val http: SafeHttpClient = SafeHttpClient(UrlConnectionHttpTransport()),
