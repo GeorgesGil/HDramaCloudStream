@@ -46,7 +46,7 @@ pantalla principal queda solo con contenido real de HDrama.
 - `apiVersion = 1`; probado con CloudStream 4.9.1 / pre-release 2026-11-09.
 - JDK Eclipse Adoptium Temurin 21.0.13+9, Gradle 8.12, AGP 8.7.3, Kotlin 2.3.0,
   compileSdk 35, minSdk 21.
-- Total de pruebas de la suite: 116 pruebas unitarias en
+- Total de pruebas de la suite: 117 pruebas unitarias en
   18 suites.
 - Artefacto `.cs3`: 140.492 bytes (137 KB) / SHA-256 `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`.
 - La verificación en emulador y la publicación de la release v1.2.1 se cierran

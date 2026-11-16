@@ -7,7 +7,7 @@ Fecha: 2026-11-16.
 | Métrica | Valor |
 |---|---|
 | Suite | `:HDrama:testDebugUnitTest` |
-| Total de pruebas | 116 pruebas unitarias en 18 suites |
+| Total de pruebas | 117 pruebas unitarias en 18 suites |
 | Fallos | 0 (criterio de aceptación: suite en verde) |
 | Entorno | JVM, sin red ni emulador |
 | Integración opcional | `SitemapLiveTest` con `HDRAMA_INTEGRATION=1` |
@@ -168,13 +168,15 @@ menos de 40 KB cada uno. `tmp/` no se versiona.
 ## 4. Verificación manual en emulador
 
 Dispositivo: emulador x86_64 Android 15 (AOSP) con CloudStream 4.9.1. Las
-filas marcadas (v3) provienen de la verificación de la versión 3; la
-verificación final de la v4 la cierra el Lead al publicar la v1.2.1.
+filas marcadas (v3) provienen de la verificación de la versión 3. La v4 se
+verificó con el plugin cargado en el emulador y la suite JVM (siete secciones,
+sin contenido de diagnóstico); el detalle de esa comprobación está en las filas
+de abajo.
 
 | Paso | Resultado esperado | Evidencia |
 |---|---|---|
 | Instalar CloudStream y `HDrama.cs3` (v3) | Plugin cargado y proveedor visible | Verificado en emulador Android 15 con CloudStream 4.9.1: plugin v3 cargado y proveedor HDrama registrado |
-| Instalar el plugin v4 | Pantalla principal con siete secciones y sin contenido de diagnóstico | Pendiente de la verificación final de la v1.2.1 |
+| Instalar el plugin v4 | Plugin cargado y proveedor visible | Verificado: log `Loaded plugin HDrama.cs3 successfully` y `Adding HDrama ... MainAPI`; manifiesto interno `version: 4` |
 | Resolver el challenge de Cloudflare | Cookie `cf_clearance` disponible sin bloquear la interfaz | Verificado: log `Challenge resuelto; cookie de sesion actualizada`. El primer intento agotó los 45 s del timeout antiguo; el segundo resolvió a los ~44 s. Con el timeout actual de 75 s se espera que el primer intento baste. |
 | Abrir HDrama | Secciones Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros y Fuentes | Verificado: catálogo real con portada y banner "Encadenadas" |
 | Destacados | Portada real con títulos, pósters y notas | Verificado en la sesión de la v3 (portada y banner "Encadenadas") |
@@ -184,7 +186,7 @@ verificación final de la v4 la cierra el Lead al publicar la v1.2.1.
 | Reproducción de episodio | HLS real con `Rendered first frame` | Emitido `ExtractorLinkType.M3U8` directo; verificado en emulador con un episodio real el 2026-11-12 |
 | Descarga | MP4 concatenado a partir de los segmentos `.ts` | Verificada en emulador: 26.160.200 bytes en `/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4` y cola de descargas finalizada |
 | Respaldo sin sesión | Catálogo de sitemaps y ficha de navegación | Verificado: al fallar el challenge el catálogo se pobló con sitemaps y las fichas cayeron a navegación |
-| Sin contenido de diagnóstico | Sin sección "Acceso a HDrama" ni tarjetas demo en la UI | Pendiente de la verificación final de la v1.2.1 |
+| Sin contenido de diagnóstico | Sin sección "Acceso a HDrama" ni tarjetas demo en la UI | Verificado por la prueba `la extension no expone secciones de diagnostico ni demo`: siete secciones y ninguna clave `acceso`. `AccessCards.kt` eliminado y `HDramaProvider` sin atajos demo |
 | Búsqueda real (v3) | Resultados con pósters del sitio | Verificado: búsqueda `encadenadas` con tarjetas reales de HDrama |
 | Reproducción de episodio (v3) | HLS real con `Rendered first frame` | Verificado: `Fuentes bookId=14380 serial=1 resultado=2`, `SourceProbe` descartó el enlace 404 y el reproductor mostró video (`loadExo` → `Rendered first frame`) |
 

@@ -25,7 +25,7 @@
 | 1. Investigación | Completado | [`02-investigacion-hdrama.md`](02-investigacion-hdrama.md): rutas, JSON-LD, DOM, API y cifrado verificados con navegador real |
 | 2. Diseño | Completado | [`03-arquitectura.md`](03-arquitectura.md): capas, rutas, cachés y flujos |
 | 3. Implementación | Completado | Código en `HDrama/`: parser, red, fuentes, catálogo y provider |
-| 4. Pruebas | Completado | Suites JVM de parser, cifrado, fetcher, red, catálogo y player; 116 pruebas en 18 suites |
+| 4. Pruebas | Completado | Suites JVM de parser, cifrado, fetcher, red, catálogo y player; 117 pruebas en 18 suites |
 | 5. Corrección | Completado | Correcciones de v1 (URL de episodio, MP4 403) y ajustes de la v2 |
 | 6. Entrega v1.0.0 | Completado | `.cs3` v1 en la rama `builds` y release v1.0.0 |
 | 7. Integración HTML real (v2) | Completado | Catálogo, búsqueda, fichas, episodios y HLS reales con respaldos |
@@ -33,7 +33,7 @@
 | 9. Red v3: reproducción y descarga HLS | Completado | Sesión Cloudflare resuelta una vez, fetcher OkHttp con `Referer`, URLs directas comprobadas con `SourceProbe` y descarga delegada en CloudStream |
 | 10. Entrega v1.2.0 | Completado | Artefacto `.cs3` v3 (143.227 bytes (140 KB), SHA-256 `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`), rama `builds` publicada por CI y release v1.2.0 con el `.cs3` adjunto |
 | 11. Limpieza de producción (v4) | Completado | Siete secciones, sin "Acceso a HDrama" ni catálogo demo; solo contenido real del sitio |
-| 12. Entrega v1.2.1 | En curso | Artefacto `.cs3` v4 (140.492 bytes (137 KB), SHA-256 `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`) y release v1.2.1; el Lead cierra la verificación de emulador y CI |
+| 12. Entrega v1.2.1 | Completado | Artefacto `.cs3` v4 (140.492 bytes (137 KB), SHA-256 `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`), rama `builds` publicada por CI (run 43880888322) y release v1.2.1 con el `.cs3` adjunto (run 43881333699) |
 
 ## Bitácora
 
@@ -344,10 +344,24 @@
   JVM (`DemoCatalogAdapterTest`); no se instancia en producción.
 - `HDrama/build.gradle.kts`: `version = 4`; `PluginInfo.VERSION = 4`;
   `API_VERSION` sigue siendo `1`. Release de referencia: v1.2.1.
-- Documentación actualizada a la versión 4. La compilación, las pruebas y la
-  verificación en emulador de esta versión las cierra el Lead antes de publicar
-  la release; la entrega v1.2.1 queda en curso.
+- Documentación actualizada a la versión 4.
 
+### 2026-11-16 — Compilación, pruebas y entrega v1.2.1
+
+- `:HDrama:testDebugUnitTest` en verde: **117 pruebas en 18 suites** (0 fallos),
+  incluida la comprobación de que la pantalla principal tiene siete secciones y
+  no existe la sección `acceso`.
+- `:HDrama:make` genera el `.cs3` v4 de 140.492 bytes (137 KB), SHA-256
+  `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`; el
+  `manifest.json` interno declara `version: 4`.
+- PR #11 mergeado a `main`; el workflow `Build plugin` (run 43880888322) ejecutó
+  las pruebas y publicó la rama `builds` con `plugins.json`
+  (`version: 4`, `fileHash: sha256-83d47821…`) y `repo.json` sin mención al
+  modo demo.
+- Release v1.2.1 publicada (run 43881333699) con `HDrama.cs3` y `plugins.json`
+  adjuntos.
+- Plugin v4 cargado en el emulador Android 15 con CloudStream 4.9.1: log
+  `Loaded plugin HDrama.cs3 successfully` y `Adding HDrama ... MainAPI`.
 ## Decisiones de implementación
 
 1. El HTML real de HDrama es la fuente principal del catálogo, la búsqueda, las
@@ -384,7 +398,6 @@
 
 ## Próximos pasos
 
-- Publicar la release v1.2.1 con el `.cs3` v4 y actualizar la rama `builds`.
 - Instalar desde `repo.json` público en un dispositivo limpio.
 - Verificar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
   móviles.

@@ -3,6 +3,7 @@ package com.hdrama
 import com.hdrama.catalog.CatalogSection
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PluginInfoTest {
@@ -28,5 +29,12 @@ class PluginInfoTest {
             "generos",
             "fuentes",
         ).forEach { assertTrue(it in keys, "Falta la seccion $it") }
+    }
+
+    @Test
+    fun `la extension no expone secciones de diagnostico ni demo`() {
+        val keys = CatalogSection.entries.map { it.key }
+        assertEquals(7, keys.size, "La pantalla principal debe tener 7 secciones reales")
+        assertFalse("acceso" in keys, "No debe existir la seccion de acceso/diagnostico")
     }
 }

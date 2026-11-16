@@ -108,7 +108,7 @@ Created ...\build\plugins.json
 BUILD SUCCESSFUL
 ```
 
-Total de pruebas de la suite: **116 pruebas unitarias en
+Total de pruebas de la suite: **117 pruebas unitarias en
 18 suites** (0 fallos esperados; ver
 [`05-pruebas.md`](05-pruebas.md)).
 

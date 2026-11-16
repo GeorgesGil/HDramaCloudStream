@@ -34,7 +34,7 @@ reproduce y CloudStream puede descargar.
 | Estados de error diferenciados y mensajes en español | Implementado |
 | Subtítulos | Soportados si la fuente los aporta |
 | Favoritos, historial, continuar viendo y pantalla completa | Nativos de CloudStream |
-| Pruebas unitarias JVM | 116 pruebas unitarias en 18 suites |
+| Pruebas unitarias JVM | 117 pruebas unitarias en 18 suites |
 
 ## Capturas
 

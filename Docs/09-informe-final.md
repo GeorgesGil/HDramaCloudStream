@@ -95,7 +95,7 @@ Los archivos de la capa de red de la v3 siguen en `network/`:
 El `.cs3` contiene `manifest.json` y `classes.dex`; el manifest declara
 `version: 4` y referencia `com.hdrama.HDramaPlugin`.
 
-Total de pruebas de la suite: 116 pruebas unitarias en
+Total de pruebas de la suite: 117 pruebas unitarias en
 18 suites.
 
 ## 5. Pruebas ejecutadas
@@ -120,8 +120,10 @@ Total de pruebas de la suite: 116 pruebas unitarias en
   `Challenge resuelto; cookie de sesion actualizada`, catálogo real con póster,
   búsqueda real, ficha con 125 episodios, reproducción completa (log `loadExo`
   → `Rendered first frame`) y descarga de 26.160.200 bytes.
-- La verificación final de la v4 (siete secciones, sin contenido demo) y la
-  publicación de la release v1.2.1 las cierra el Lead.
+- La versión 4 se compiló con `:HDrama:make` (140.492 bytes, SHA-256
+  `83d47821…`) y se cargó en el emulador Android 15 con CloudStream 4.9.1
+  (`Loaded plugin HDrama.cs3 successfully`). La suite JVM fija siete secciones
+  y la ausencia de la sección `acceso` (117 pruebas en 18 suites).
 
 ## 6. Funciones operativas
 
@@ -179,7 +181,8 @@ La copia de entrega se publica en la rama `builds` y en la release v1.2.1:
 - Release: <https://github.com/GeorgesGil/HDramaCloudStream/releases/tag/v1.2.1>
   (adjunta `HDrama.cs3` de 140.492 bytes (137 KB), SHA-256
   `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`, y `plugins.json` con `version: 4`).
-- Rama `builds` actualizada por el workflow `Build plugin`.
+- Rama `builds` actualizada por el workflow `Build plugin` (run 43880888322) y
+  release publicada por el run 43881333699.
 - Repositorio de CloudStream:
   `https://raw.githubusercontent.com/GeorgesGil/HDramaCloudStream/builds/repo.json`
 
@@ -210,5 +213,4 @@ Detalle en [`06-instalacion.md`](06-instalacion.md).
    el tratamiento del `bookId` si el sitio cambia.
 4. Actualizar AGP/Kotlin juntos para eliminar las advertencias de metadata D8.
 5. Añadir pruebas instrumentadas de UI y de carga del plugin.
-6. Revisar `repo.json` y `Docs/04` cuando se cierre la v1.2.1 para que reflejen
-   la versión 4 y la ausencia de contenido demo.
+
