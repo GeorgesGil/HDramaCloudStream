@@ -1,0 +1,22 @@
+[
+    {
+        "fileHash": "sha256-83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/GeorgesGil/HDramaCloudStream",
+        "fileSize": 140492,
+        "status": 3,
+        "language": "es",
+        "authors": [
+            "GeorgesGil"
+        ],
+        "tvTypes": [
+            "TvSeries",
+            "AsianDrama"
+        ],
+        "version": 4,
+        "internalName": "HDrama",
+        "description": "HDrama para CloudStream: catalogo, fichas, episodios y video HLS reales desde es.hdrama.net, con reproduccion y descarga y respaldo por sitemaps.",
+        "url": "https://raw.githubusercontent.com/GeorgesGil/HDramaCloudStream/builds/HDrama.cs3",
+        "name": "HDrama"
+    }
+]
