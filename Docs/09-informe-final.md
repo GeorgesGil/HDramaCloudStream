@@ -122,8 +122,12 @@ Total de pruebas de la suite: 117 pruebas unitarias en
   → `Rendered first frame`) y descarga de 26.160.200 bytes.
 - La versión 4 se compiló con `:HDrama:make` (140.492 bytes, SHA-256
   `83d47821…`) y se cargó en el emulador Android 15 con CloudStream 4.9.1
-  (`Loaded plugin HDrama.cs3 successfully`). La suite JVM fija siete secciones
-  y la ausencia de la sección `acceso` (117 pruebas en 18 suites).
+  (`Loaded plugin HDrama.cs3 successfully`); el challenge se resolvió
+  (`Challenge resuelto; cookie de sesion actualizada`) y el catálogo real
+  mostró únicamente las siete secciones, sin la fila "Acceso a HDrama"
+  (capturas `10-catalogo-sin-diagnostico-v4.png` y
+  `11-secciones-finales-v4.png`). La suite JVM fija siete secciones y la
+  ausencia de la sección `acceso` (117 pruebas en 18 suites).
 
 ## 6. Funciones operativas
 

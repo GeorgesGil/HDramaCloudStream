@@ -38,9 +38,16 @@ reproduce y CloudStream puede descargar.
 
 ## Capturas
 
-Capturas de la verificación de la versión 3 (emulador Android 15 +
-CloudStream 4.9.1): ficha real con 125 episodios, reproducción HLS real
-(`Rendered first frame`) y búsqueda real.
+Capturas de la verificación de la versión 4 (emulador Android 15 +
+CloudStream 4.9.1): catálogo real con las siete secciones y sin la sección de
+diagnóstico "Acceso a HDrama".
+
+| Catálogo real v4 (7 secciones) | Secciones finales v4 (sin Acceso) |
+|---|---|
+| ![Catálogo v4](Docs/images/10-catalogo-sin-diagnostico-v4.png) | ![Secciones v4](Docs/images/11-secciones-finales-v4.png) |
+
+Capturas de la verificación de la versión 3: ficha real con 125 episodios,
+reproducción HLS real (`Rendered first frame`) y búsqueda real.
 
 | Ficha real v3 (125 episodios) | Reproducción HLS v3 |
 |---|---|
@@ -51,8 +58,7 @@ CloudStream 4.9.1): ficha real con 125 episodios, reproducción HLS real
 | ![Búsqueda v3](Docs/images/09-busqueda-real-v3.png) |
 
 Capturas de la verificación de la versión 2 (emulador Android 14 + CloudStream
-4.9.1). Las versiones 3 y 4 conservan el mismo catálogo y las mismas fichas;
-las capturas de la versión 4 quedan pendientes de adjuntar.
+4.9.1). Las versiones 3 y 4 conservan el mismo catálogo y las mismas fichas.
 
 | Catálogo real (HTML) | Ficha real con episodios |
 |---|---|

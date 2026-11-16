@@ -176,7 +176,7 @@ de abajo.
 | Paso | Resultado esperado | Evidencia |
 |---|---|---|
 | Instalar CloudStream y `HDrama.cs3` (v3) | Plugin cargado y proveedor visible | Verificado en emulador Android 15 con CloudStream 4.9.1: plugin v3 cargado y proveedor HDrama registrado |
-| Instalar el plugin v4 | Plugin cargado y proveedor visible | Verificado: log `Loaded plugin HDrama.cs3 successfully` y `Adding HDrama ... MainAPI`; manifiesto interno `version: 4` |
+| Instalar el plugin v4 | Plugin cargado y proveedor visible | Verificado en emulador Android 15 con CloudStream 4.9.1: `Loaded plugin HDrama.cs3 successfully` y `Adding HDrama ... MainAPI`; manifiesto interno `version: 4` |
 | Resolver el challenge de Cloudflare | Cookie `cf_clearance` disponible sin bloquear la interfaz | Verificado: log `Challenge resuelto; cookie de sesion actualizada`. El primer intento agotó los 45 s del timeout antiguo; el segundo resolvió a los ~44 s. Con el timeout actual de 75 s se espera que el primer intento baste. |
 | Abrir HDrama | Secciones Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros y Fuentes | Verificado: catálogo real con portada y banner "Encadenadas" |
 | Destacados | Portada real con títulos, pósters y notas | Verificado en la sesión de la v3 (portada y banner "Encadenadas") |
@@ -186,14 +186,17 @@ de abajo.
 | Reproducción de episodio | HLS real con `Rendered first frame` | Emitido `ExtractorLinkType.M3U8` directo; verificado en emulador con un episodio real el 2026-11-12 |
 | Descarga | MP4 concatenado a partir de los segmentos `.ts` | Verificada en emulador: 26.160.200 bytes en `/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4` y cola de descargas finalizada |
 | Respaldo sin sesión | Catálogo de sitemaps y ficha de navegación | Verificado: al fallar el challenge el catálogo se pobló con sitemaps y las fichas cayeron a navegación |
-| Sin contenido de diagnóstico | Sin sección "Acceso a HDrama" ni tarjetas demo en la UI | Verificado por la prueba `la extension no expone secciones de diagnostico ni demo`: siete secciones y ninguna clave `acceso`. `AccessCards.kt` eliminado y `HDramaProvider` sin atajos demo |
+| Sin contenido de diagnóstico | Sin sección "Acceso a HDrama" ni tarjetas demo en la UI | Verificado en el emulador: catálogo real con las siete secciones (Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros y Fuentes) y sin fila "Acceso a HDrama"; capturas `10-catalogo-sin-diagnostico-v4.png` y `11-secciones-finales-v4.png`. Además la prueba `la extension no expone secciones de diagnostico ni demo` fija siete claves y la ausencia de `acceso` |
 | Búsqueda real (v3) | Resultados con pósters del sitio | Verificado: búsqueda `encadenadas` con tarjetas reales de HDrama |
 | Reproducción de episodio (v3) | HLS real con `Rendered first frame` | Verificado: `Fuentes bookId=14380 serial=1 resultado=2`, `SourceProbe` descartó el enlace 404 y el reproductor mostró video (`loadExo` → `Rendered first frame`) |
 
 Capturas de la verificación de la v3 en [`Docs/images/`](images/):
 `07-ficha-real-v3.png` (ficha con 125 episodios),
 `08-reproduccion-hls-v3.png` (fotograma del HLS real) y
-`09-busqueda-real-v3.png` (búsqueda real).
+`09-busqueda-real-v3.png` (búsqueda real). Capturas de la v4:
+`10-catalogo-sin-diagnostico-v4.png` (catálogo real con siete secciones) y
+`11-secciones-finales-v4.png` (tramo final: Catálogo general, Géneros y
+Fuentes, sin sección de diagnóstico).
 
 ## 5. Pruebas no ejecutadas
 

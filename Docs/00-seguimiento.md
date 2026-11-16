@@ -360,8 +360,13 @@
   modo demo.
 - Release v1.2.1 publicada (run 43881333699) con `HDrama.cs3` y `plugins.json`
   adjuntos.
-- Plugin v4 cargado en el emulador Android 15 con CloudStream 4.9.1: log
-  `Loaded plugin HDrama.cs3 successfully` y `Adding HDrama ... MainAPI`.
+- Verificación en emulador Android 15 con CloudStream 4.9.1: plugin v4
+  cargado (`Loaded plugin HDrama.cs3 successfully`), challenge de Cloudflare
+  resuelto (`Challenge resuelto; cookie de sesion actualizada`) y catálogo real
+  con las siete secciones (Destacados, Novedades, Más vistos, Tendencias,
+  Catálogo general, Géneros y Fuentes), sin la fila "Acceso a HDrama".
+  Capturas: `Docs/images/10-catalogo-sin-diagnostico-v4.png` y
+  `11-secciones-finales-v4.png`.
 ## Decisiones de implementación
 
 1. El HTML real de HDrama es la fuente principal del catálogo, la búsqueda, las
