@@ -213,4 +213,3 @@ Detalle en [`06-instalacion.md`](06-instalacion.md).
    el tratamiento del `bookId` si el sitio cambia.
 4. Actualizar AGP/Kotlin juntos para eliminar las advertencias de metadata D8.
 5. Añadir pruebas instrumentadas de UI y de carga del plugin.
-
