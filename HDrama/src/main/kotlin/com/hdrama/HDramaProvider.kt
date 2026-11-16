@@ -10,7 +10,6 @@ import com.hdrama.player.LinkResolution
 import com.hdrama.player.LinkResolver
 import com.hdrama.player.LinkType
 import com.hdrama.player.ResolvedLink
-import com.hdrama.utils.TextNormalizer
 import com.hdrama.utils.UrlUtils
 import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.HomePageResponse
@@ -38,8 +37,9 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
  *
  * Fuente principal: HTML real de `es.hdrama.net` (JSON-LD, fichas, episodios y
  * API de fuentes HLS) mediante una sesion con Cloudflare resuelto por WebView.
- * Respaldo: sitemaps publicos y fichas de navegacion; el catalogo demo sigue
- * disponible desde la seccion "Acceso a HDrama" para diagnostico del player.
+ * Respaldo: sitemaps publicos y fichas de navegacion. La extension expone solo
+ * contenido real del sitio: no hay secciones de diagnostico ni catalogo demo en
+ * la UI.
  */
 class HDramaProvider(
     private val repository: CatalogRepository = CatalogRepository(),
@@ -99,18 +99,6 @@ class HDramaProvider(
             return newSearchResponseList(listOfNotNull(series?.toSearchResponse()), false)
         }
 
-        // Atajo de diagnostico: permite abrir el contenido demo sin depender
-        // de que la seccion "Acceso a HDrama" este visible.
-        if (TextNormalizer.normalize(clean).startsWith("prueba")) {
-            val demoResults = runCatching { repository.demoAdapter().search(clean, page) }
-                .getOrElse { CatalogPage.empty(page) }
-            if (demoResults.items.isNotEmpty()) {
-                return newSearchResponseList(
-                    demoResults.items.map { it.toSearchResponse() },
-                    demoResults.hasNext,
-                )
-            }
-        }
 
         val results = runCatching { repository.search(clean, page) }
             .getOrElse { CatalogPage.empty(page) }
@@ -121,11 +109,9 @@ class HDramaProvider(
         search(query, 1).items
 
     override suspend fun load(url: String): LoadResponse? {
-        val effectiveUrl = UrlUtils.recoverDemoSeriesUrl(url) ?: url
-        val series = repository.load(effectiveUrl)
+        val series = repository.load(url)
             ?: throw ErrorLoadingException(
-                "No se pudo cargar la ficha. Verifica que la URL sea de HDrama " +
-                    "o que el contenido de demostracion exista."
+                "No se pudo cargar la ficha. Verifica que la URL sea de HDrama."
             )
 
         val episodes = runCatching { repository.episodes(series) }
@@ -198,7 +184,6 @@ class HDramaProvider(
     private fun buildPlot(series: Series): String = buildString {
         append(series.synopsis.orEmpty().trim())
         when {
-            series.demo -> append("\n\nDatos de demostracion local. No son contenido real de HDrama.")
             series.browserOnly -> append(
                 "\n\nNo se pudo cargar el HTML de HDrama. Abre la pagina original en el navegador."
             )
@@ -212,15 +197,11 @@ class HDramaProvider(
     }.trim()
 
     private fun seriesUrl(series: Series): String =
-        if (series.demo) {
-            UrlUtils.demoSeriesUrl(series.id)
-        } else {
-            series.pageUrl ?: UrlUtils.seriesPageUrl(series.slug)
-        }
+        series.pageUrl ?: UrlUtils.seriesPageUrl(series.slug)
 
     private fun Series.toSearchResponse(): SearchResponse =
         newTvSeriesSearchResponse(
-            name = if (demo) "$title (demo)" else title,
+            name = title,
             url = seriesUrl(this),
             type = TvType.AsianDrama,
             fix = false,
@@ -240,10 +221,7 @@ class HDramaProvider(
                 season = 1
                 runTime = this@toCloudEpisode.durationSeconds
                     ?.let { seconds -> (seconds / 60).coerceAtLeast(1) }
-                description = when {
-                    series.demo -> "Episodio de demostracion (${series.title})."
-                    else -> "Capítulo ${this@toCloudEpisode.number} de ${series.title}."
-                }
+                description = "Capítulo ${this@toCloudEpisode.number} de ${series.title}."
                 posterUrl = series.posterUrl
             },
             fix = false,

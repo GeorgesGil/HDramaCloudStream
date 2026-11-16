@@ -1,6 +1,6 @@
 # Política de privacidad
 
-Fecha: 2026-11-12. Aplica a la versión 3 del plugin.
+Fecha: 2026-11-16. Aplica a la versión 4 del plugin.
 
 ## 1. Principio
 
@@ -20,8 +20,6 @@ a los hosts de video que el propio sitio indica.
 | URL de ficha importada manualmente | Abrir la ficha real o, si falla, una tarjeta de navegación | `es.hdrama.net` / navegador del usuario |
 | Manifest HLS y segmentos del video | Reproducción del episodio | Hosts indicados por el sitio (por ejemplo `zshipricf.farsunpteltd.net`, `acdn-v-us.stardust-tv.com`) |
 | Sonda de disponibilidad de enlaces | Descartar URLs de video muertas antes de reproducir (manifiesto HLS o 1 KB del MP4) | Los mismos hosts de video |
-| Videos demo MP4/HLS | Diagnóstico del reproductor | `media.w3.org`, `test-streams.mux.dev` |
-| Portadas de las tarjetas de acceso | Placeholder visual de las tarjetas locales | `placehold.co` |
 
 No se envían credenciales de usuario, correo, número de teléfono ni
 identificadores publicitarios. El plugin no pide ni almacena usuario y
@@ -76,9 +74,10 @@ contraseña porque el sitio no ofrece cuentas que el plugin utilice.
   `Referer` a esos hosts (el host directo responde 403 si lo recibe); cuando
   comprueba si una URL responde, solo pide el manifiesto HLS o los primeros
   bytes del MP4.
-- Los videos demo son recursos públicos de terceros; su disponibilidad y
-  condiciones dependen de sus proveedores.
-- Las tarjetas de acceso usan imágenes de `placehold.co` con parámetros fijos.
+- El catálogo sintético de pruebas (`DemoCatalogAdapterTest`) referencia recursos
+  públicos de terceros (`media.w3.org`, `test-streams.mux.dev`, `placehold.co`),
+  pero no se instancia en la extensión: en producción el plugin no realiza
+  peticiones a esos hosts.
 
 ## 7. Permisos
 

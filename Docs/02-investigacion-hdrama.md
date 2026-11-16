@@ -1,6 +1,6 @@
 # Investigación: HDrama (es.hdrama.net)
 
-Fecha: 2026-11-11. Actualizado el 2026-11-12 para la versión 3 del plugin.
+Fecha: 2026-11-11. Actualizado el 2026-11-16 para la versión 4 del plugin.
 
 La investigación inicial (2026-11-11) observó los sitemaps públicos y el
 Cloudflare Managed Challenge. Para la versión 2 se repitió el análisis con una
@@ -98,7 +98,7 @@ Conclusión: la API exige una petición **same-origin** a nivel de cabeceras
 (`Referer` o `Sec-Fetch-Site`), no un XHR dentro de un WebView. Basta con
 resolver el challenge una vez y usar un cliente HTTP normal para todo.
 
-### Cómo se resuelve en el plugin (versión 3)
+### Cómo se resuelve en el plugin (versiones 3 y 4)
 
 1. `WebViewCloudflareSession` crea **un solo** WebView y carga
    `https://es.hdrama.net/`.
@@ -327,7 +327,7 @@ CloudStream descarga el mismo enlace que reproduce el plugin:
 4. Se descargan los segmentos `.ts` (relativos a la URL del playlist) y se
    concatenan en un archivo MP4. No hace falta proxy ni cabeceras especiales.
 
-## 10. Estado de implementación (versión 3)
+## 10. Estado de implementación (versión 4)
 
 | Módulo | Estado | Implementación |
 |---|---|---|
@@ -341,7 +341,7 @@ CloudStream descarga el mismo enlace que reproduce el plugin:
 | Descarga HLS | Implementado | CloudStream descarga el playlist, concatena los segmentos `.ts` en un MP4 |
 | Sesión Cloudflare | Implementado | `WebViewCloudflareSession` resuelve el challenge una vez; `HdramaHttpFetcher` hace el resto por OkHttp; warm-up al cargar el plugin |
 | Respaldo sin sesión | Implementado | Sitemaps públicos, fichas de navegación e importación manual |
-| Catálogo demo | Implementado | 17 series sintéticas y MP4/HLS públicos en "Acceso a HDrama" |
+| Contenido de producción | Implementado | Solo series reales de HDrama (siete secciones); el catálogo sintético queda como utilidad de pruebas JVM |
 
 ## 11. Evidencia y límites de esta investigación
 
@@ -354,12 +354,14 @@ CloudStream descarga el mismo enlace que reproduce el plugin:
   challenge y el catálogo real (`bookId` UUID con 64 episodios).
 - El sitio es un objetivo en movimiento: rutas, selectores, claves de
   cifrado, formato del `bookId` y hosts de video pueden cambiar sin aviso. La
-  capa de respaldo (sitemaps, navegación y demo) cubre esos fallos, y las
-  limitaciones conocidas están en [`08-limitaciones.md`](08-limitaciones.md).
+  capa de respaldo (sitemaps, navegación e importación manual) cubre esos
+  fallos, y las limitaciones conocidas están en
+  [`08-limitaciones.md`](08-limitaciones.md).
 - La nota y los metadatos dependen de la estructura del HTML; el parser es
   tolerante y deja campos opcionales en `null` cuando no los encuentra.
-- La verificación de reproducción y descarga completas en emulador se cierra en
-  la entrega v1.2.0; las suites JVM y el análisis del código de CloudStream
+- La verificación de reproducción y descarga completas en emulador quedó
+  cerrada en la entrega v1.2.0; la versión 4 no cambia el motor de reproducción
+  ni el de descarga. Las suites JVM y el análisis del código de CloudStream
   cubren el mecanismo.
 
 ## 12. Referencias

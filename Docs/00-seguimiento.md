@@ -9,13 +9,13 @@
 | Sitio objetivo | https://es.hdrama.net/ |
 | Repositorio | https://github.com/GeorgesGil/HDramaCloudStream |
 | Visibilidad | Público desde la v1.1.0 |
-| Versión del plugin | 3 |
-| Release de referencia | v1.2.0 |
+| Versión del plugin | 4 |
+| Release de referencia | v1.2.1 |
 | Rama principal | `main` |
 | Rama de artefactos | `builds` (publicada por el workflow) |
 | GitHub Actions | Habilitadas: workflow Build plugin (pruebas, .cs3, rama builds y adjunto en releases) |
 | Fecha de inicio | 2026-11-11 |
-| Fecha de esta revisión | 2026-11-12 |
+| Fecha de esta revisión | 2026-11-16 |
 | Zona horaria | America/Santo_Domingo |
 
 ## Estado por fase
@@ -25,13 +25,15 @@
 | 1. Investigación | Completado | [`02-investigacion-hdrama.md`](02-investigacion-hdrama.md): rutas, JSON-LD, DOM, API y cifrado verificados con navegador real |
 | 2. Diseño | Completado | [`03-arquitectura.md`](03-arquitectura.md): capas, rutas, cachés y flujos |
 | 3. Implementación | Completado | Código en `HDrama/`: parser, red, fuentes, catálogo y provider |
-| 4. Pruebas | Completado | Suites JVM de parser, cifrado, fetcher, red, catálogo y player; 117 pruebas en 18 suites |
-| 5. Corrección | Completado | Correcciones de v1 (URL de episodio, URL demo, MP4 403) y ajustes de la v2 |
+| 4. Pruebas | Completado | Suites JVM de parser, cifrado, fetcher, red, catálogo y player; 116 pruebas en 18 suites |
+| 5. Corrección | Completado | Correcciones de v1 (URL de episodio, MP4 403) y ajustes de la v2 |
 | 6. Entrega v1.0.0 | Completado | `.cs3` v1 en la rama `builds` y release v1.0.0 |
 | 7. Integración HTML real (v2) | Completado | Catálogo, búsqueda, fichas, episodios y HLS reales con respaldos |
 | 8. Entrega v1.1.0 | Completado | `.cs3` v2 (123.299 bytes, SHA-256 `7fbc…94e4`), release v1.1.0 con artefacto adjunto y rama `builds` |
 | 9. Red v3: reproducción y descarga HLS | Completado | Sesión Cloudflare resuelta una vez, fetcher OkHttp con `Referer`, URLs directas comprobadas con `SourceProbe` y descarga delegada en CloudStream |
 | 10. Entrega v1.2.0 | Completado | Artefacto `.cs3` v3 (143.227 bytes (140 KB), SHA-256 `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`), rama `builds` publicada por CI y release v1.2.0 con el `.cs3` adjunto |
+| 11. Limpieza de producción (v4) | Completado | Siete secciones, sin "Acceso a HDrama" ni catálogo demo; solo contenido real del sitio |
+| 12. Entrega v1.2.1 | En curso | Artefacto `.cs3` v4 (140.492 bytes (137 KB), SHA-256 `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`) y release v1.2.1; el Lead cierra la verificación de emulador y CI |
 
 ## Bitácora
 
@@ -322,13 +324,38 @@
   `be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d`) y
   `plugins.json`.
 
+### 2026-11-16 — Limpieza de producción (v4/v1.2.1)
+
+- El usuario reportó que en la extensión de producción aparecía la sección
+  "Acceso a HDrama" (tarjetas HDrama, importar enlace y prueba de reproducción
+  demo), contenido de diagnóstico que no corresponde al sitio.
+- Se eliminó `CatalogSection.ACCESO` y `AccessCards.kt`, junto con sus ramas en
+  `HdramaCatalogAdapter`, `SitemapCatalogAdapter` y `DemoCatalogAdapter`. La
+  pantalla principal queda con **siete secciones**: Destacados, Novedades, Más
+  vistos, Tendencias, Catálogo general, Géneros y Fuentes.
+- `HDramaProvider` ya no tiene el atajo de búsqueda `prueba` ni ramas de demo en
+  `load`, `buildPlot`, `seriesUrl`, `toSearchResponse` ni `toCloudEpisode`; ya
+  no se recuperan URLs internas de demo.
+- `CatalogRepository` ya no usa el catálogo demo como último recurso: la cadena
+  es HTML real → sitemaps → página vacía, y las fichas de URLs ajenas devuelven
+  `null`. Se mantienen la importación manual y las fichas de navegación
+  (`browserOnly`).
+- `DemoCatalogAdapter` sigue existiendo solo como utilidad interna de pruebas
+  JVM (`DemoCatalogAdapterTest`); no se instancia en producción.
+- `HDrama/build.gradle.kts`: `version = 4`; `PluginInfo.VERSION = 4`;
+  `API_VERSION` sigue siendo `1`. Release de referencia: v1.2.1.
+- Documentación actualizada a la versión 4. La compilación, las pruebas y la
+  verificación en emulador de esta versión las cierra el Lead antes de publicar
+  la release; la entrega v1.2.1 queda en curso.
+
 ## Decisiones de implementación
 
 1. El HTML real de HDrama es la fuente principal del catálogo, la búsqueda, las
    fichas y los episodios.
 2. Los sitemaps públicos son el respaldo cuando la sesión de Cloudflare o la
    red fallan; las fichas se convierten entonces en navegación al sitio.
-3. El catálogo demo queda como diagnóstico del reproductor y último recurso.
+3. No hay contenido sintético en la extensión de producción: el catálogo demo
+   queda solo como utilidad de pruebas JVM y no se expone en la UI.
 4. El challenge de Cloudflare se resuelve **una sola vez** por proceso en un
    WebView (`WebViewCloudflareSession`) y todas las peticiones van después por
    OkHttp con la cookie, el User-Agent del WebView y `Referer`. Esto elimina el
@@ -347,8 +374,9 @@
    queda para peticiones con sesión que aun así fallan.
 9. El `bookId` se trata como identificador flexible (numérico, hexadecimal,
    UUID o slug) porque el sitio lo ha mostrado en varios formatos.
-10. Las ocho secciones se alinean con las del sitio; "Nuevos" no se duplica
-    porque la portada lo muestra como subconjunto de Novedades.
+10. Las siete secciones se alinean con las del sitio; "Nuevos" no se duplica
+    porque la portada lo muestra como subconjunto de Novedades y no hay
+    secciones locales de diagnóstico.
 11. El repositorio es público y GitHub Actions está habilitado; el workflow
     `Build plugin` ejecuta pruebas, compila el `.cs3`, actualiza la rama
     `builds` y adjunta el artefacto en cada release. La instalación local
@@ -356,6 +384,7 @@
 
 ## Próximos pasos
 
+- Publicar la release v1.2.1 con el `.cs3` v4 y actualizar la rama `builds`.
 - Instalar desde `repo.json` público en un dispositivo limpio.
 - Verificar en Galaxy Z Fold8 (plegado/desplegado, rotación, 9:16) y en redes
   móviles.

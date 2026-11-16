@@ -1,9 +1,9 @@
-# Instalación en Android (versión 3)
+# Instalación en Android (versión 4)
 
-Fecha: 2026-11-12. Procedimiento de instalación del plugin **v3** en Android
+Fecha: 2026-11-16. Procedimiento de instalación del plugin **v4** en Android
 con CloudStream 4.9.1. La instalación local del `.cs3` es la vía verificada;
 la instalación como repositorio depende de que el repositorio sea público y de
-que la rama `builds` tenga los artefactos de la versión 3.
+que la rama `builds` tenga los artefactos de la versión 4.
 
 El dispositivo objetivo final es un Samsung Galaxy Z Fold8 con Android 17/One
 UI 9; no se dispone de él en esta sesión, así que la verificación se hace en
@@ -73,7 +73,7 @@ Loaded plugin HDrama.cs3 successfully
 2. En la pantalla principal, pulsar el filtro inferior derecho
    (inicialmente "Ninguno").
 3. Seleccionar **HDrama**.
-4. Deben aparecer las ocho secciones:
+4. Deben aparecer las siete secciones de contenido real:
    - Destacados
    - Novedades
    - Más vistos
@@ -81,20 +81,23 @@ Loaded plugin HDrama.cs3 successfully
    - Catálogo general
    - Géneros
    - Fuentes
-   - Acceso a HDrama
+
+La extensión de producción no incluye sección de diagnóstico ni catálogo demo:
+solo se muestran series reales de HDrama. Si la sesión de Cloudflare no se
+resuelve, el catálogo cae a los sitemaps públicos y, si tampoco hay datos, la
+sección queda vacía (ver [`08-limitaciones.md`](08-limitaciones.md)).
 
 El plugin resuelve el Cloudflare Managed Challenge una sola vez: al cargar el
 plugin lanza un warm-up en segundo plano que sondea `CookieManager` hasta
 obtener `cf_clearance` (timeout 75 s en equipos lentos) y después todas las
-peticiones van por OkHttp. Si el challenge no se resuelve, el catálogo cae a
-los sitemaps públicos y las fichas a la navegación (ver
-[`08-limitaciones.md`](08-limitaciones.md)).
+peticiones van por OkHttp.
 
-Evidencia de la verificación en emulador de la versión 3 (Android 15,
-CloudStream 4.9.1, plugin v3): plugin cargado, catálogo real con pósters,
-búsqueda real, ficha con 125 episodios, reproducción HLS (`Rendered first
-frame`) y descarga completa del episodio 1. Detalle en
-[`05-pruebas.md`](05-pruebas.md).
+Evidencia de la verificación en emulador (Android 15, CloudStream 4.9.1):
+plugin cargado, catálogo real con pósters, búsqueda real, ficha con 125
+episodios, reproducción HLS (`Rendered first frame`) y descarga completa del
+episodio 1 en la versión 3. La versión 4 mantiene esas funciones y solo recorta
+la UI a contenido real (siete secciones, sin diagnóstico); la verificación final
+de la v1.2.1 la cierra el Lead. Detalle en [`05-pruebas.md`](05-pruebas.md).
 
 ## 4. Navegar por el catálogo real
 
@@ -143,18 +146,7 @@ con 26.160.200 bytes, la cola de descargas terminó y el archivo (MPEG-TS con
 extensión `.mp4`, comportamiento estándar de CloudStream para HLS) es
 reproducible. Detalle en [`05-pruebas.md`](05-pruebas.md).
 
-## 7. Usar el catálogo demo
-
-La sección **Acceso a HDrama** incluye:
-
-- **HDrama: abrir sitio oficial**: abre `es.hdrama.net` en el navegador.
-- **Importar enlace de HDrama**: explica cómo pegar una URL de serie.
-- **Prueba de reproducción (demo)**: serie sintética con un MP4 1080p y un HLS
-  720p públicos para comprobar el reproductor. No es contenido de HDrama.
-
-También se puede buscar `prueba` para llegar a la serie demo.
-
-## 8. Importar una ficha de HDrama manualmente
+## 7. Importar una ficha de HDrama manualmente
 
 1. Copiar una URL del tipo
    `https://es.hdrama.net/series/<slug>`.
@@ -162,7 +154,7 @@ También se puede buscar `prueba` para llegar a la serie demo.
 3. Se abre la ficha real (si la sesión funciona) o una ficha de navegación con
    el botón de navegador.
 
-## 9. Instalar como repositorio de CloudStream
+## 8. Instalar como repositorio de CloudStream
 
 `repo.json` del repositorio apunta a la rama `builds`:
 
@@ -176,13 +168,13 @@ Para usarlo desde CloudStream (Ajustes > Extensiones > Añadir repositorio):
   Visibilidad actual del repositorio:
   **público**.
 - La rama `builds` debe contener `repo.json`, `plugins.json` y `HDrama.cs3` de
-  la versión 3. El workflow de GitHub Actions los publica en cada push a
+  la versión 4. El workflow de GitHub Actions los publica en cada push a
   `main`/release cuando Actions está habilitado; también se pueden copiar a
   mano.
 - Si el repositorio es privado o la rama `builds` no está actualizada, usar la
   instalación local del paso 2.
 
-## 10. Diagnóstico por ADB
+## 9. Diagnóstico por ADB
 
 ```powershell
 adb logcat -s PluginManager PluginInstance CS3ExoPlayer HDrama
@@ -196,7 +188,7 @@ adb logcat -s PluginManager PluginInstance CS3ExoPlayer HDrama
 - `ErrorLoadingException`: mensaje de estado del episodio (temporalmente no
   disponible, navegador requerido, etc.).
 
-## 11. Galaxy Z Fold8
+## 10. Galaxy Z Fold8
 
 El plugin no modifica la UI ni el player de CloudStream. La rotación, el
 cambio de pantalla exterior/interior y la relación de aspecto los gestiona

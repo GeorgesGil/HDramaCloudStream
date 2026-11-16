@@ -55,9 +55,6 @@ class HdramaCatalogAdapter(
 
     override suspend fun section(section: CatalogSection, page: Int): CatalogPage<Series> {
         val safePage = page.coerceAtLeast(1)
-        if (section == CatalogSection.ACCESO) {
-            return paginate(AccessCards.all(), safePage)
-        }
         if (safePage > 1 && (section == CatalogSection.DESTACADOS ||
                 section == CatalogSection.GENEROS ||
                 section == CatalogSection.FUENTES)
@@ -110,7 +107,6 @@ class HdramaCatalogAdapter(
     }
 
     override suspend fun episodes(series: Series): List<Episode> {
-        if (series.demo) return emptyList()
         if (series.browserOnly) return listOf(ManualHdramaImport.browserEpisode(series))
         // Las paginas de navegacion (generos/fuentes) no tienen episodios.
         if (browseCache.get(series.id) != null) return emptyList()
@@ -147,7 +143,6 @@ class HdramaCatalogAdapter(
     }
 
     override suspend fun related(series: Series): List<Series> {
-        if (series.demo) return emptyList()
         browseCache.get(series.id)?.let { return it.items }
         val page = loadSeriesPage(series.pageUrl ?: HdramaRoutes.series(series.slug))
         return page?.related.orEmpty()
@@ -273,16 +268,8 @@ class HdramaCatalogAdapter(
         CatalogSection.CATALOGO -> HdramaRoutes.seriesList(page)
         CatalogSection.GENEROS -> HdramaRoutes.categories()
         CatalogSection.FUENTES -> HdramaRoutes.sources()
-        CatalogSection.ACCESO -> HdramaRoutes.home()
     }
 
-    private fun paginate(items: List<Series>, page: Int): CatalogPage<Series> {
-        val safePage = page.coerceAtLeast(1)
-        val from = (safePage - 1) * HdramaRoutes.PAGE_SIZE
-        if (from >= items.size) return CatalogPage(emptyList(), safePage, false)
-        val slice = items.drop(from).take(HdramaRoutes.PAGE_SIZE)
-        return CatalogPage(slice, safePage, from + slice.size < items.size)
-    }
 
     /** Pagina de navegacion (genero, fuente u otra lista) con sus series. */
     data class BrowsePage(val series: Series, val items: List<Series>)

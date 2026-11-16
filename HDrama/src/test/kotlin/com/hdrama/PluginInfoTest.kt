@@ -9,7 +9,7 @@ class PluginInfoTest {
     @Test
     fun `metadatos coinciden con el manifest esperado`() {
         assertEquals("HDrama", PluginInfo.NAME)
-        assertEquals(3, PluginInfo.VERSION)
+        assertEquals(4, PluginInfo.VERSION)
         assertEquals(1, PluginInfo.API_VERSION)
         assertEquals("com.hdrama.HDramaPlugin", PluginInfo.PLUGIN_CLASS)
         assertEquals("es", PluginInfo.LANGUAGE)
@@ -27,7 +27,6 @@ class PluginInfoTest {
             "catalogo",
             "generos",
             "fuentes",
-            "acceso",
         ).forEach { assertTrue(it in keys, "Falta la seccion $it") }
     }
 }

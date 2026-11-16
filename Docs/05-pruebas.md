@@ -1,13 +1,13 @@
-# Pruebas (versión 3)
+# Pruebas (versión 4)
 
-Fecha: 2026-11-12.
+Fecha: 2026-11-16.
 
 ## 1. Resumen
 
 | Métrica | Valor |
 |---|---|
 | Suite | `:HDrama:testDebugUnitTest` |
-| Total de pruebas | 117 pruebas unitarias en 18 suites |
+| Total de pruebas | 116 pruebas unitarias en 18 suites |
 | Fallos | 0 (criterio de aceptación: suite en verde) |
 | Entorno | JVM, sin red ni emulador |
 | Integración opcional | `SitemapLiveTest` con `HDRAMA_INTEGRATION=1` |
@@ -126,8 +126,10 @@ El total se obtiene sumando `testsuite.tests` de los XML generados en
   - `/categories` se abre como página navegable con recomendaciones.
   La sonda de disponibilidad se inyecta en el adaptador; en JVM el valor por
   defecto es `NoSourceProbe`, así que estas pruebas no hacen red.
-- `DemoCatalogAdapterTest`: paginación, búsqueda sin acentos, series demo,
-  episodios MP4/HLS y estados.
+- `DemoCatalogAdapterTest`: prueba unitaria aislada del catálogo sintético
+  local (paginación, búsqueda sin acentos, series de prueba, episodios MP4/HLS
+  y estados). El catálogo demo ya no se instancia en producción ni se prueba
+  como integración de la extensión; queda como utilidad de las pruebas JVM.
 - `SitemapCatalogAdapterTest`: secciones y fichas de navegación del respaldo.
 
 ### 2.5 Reproducción y estados (`com.hdrama.player`)
@@ -144,7 +146,7 @@ El total se obtiene sumando `testsuite.tests` de los XML generados en
   `ftp`/`javascript`, extracción de slug, recuperación del esquema demo.
 - `EpisodeIdTest`: codificación `hdrama-demo://episode/<slug>/<n>`, parseo y
   orden.
-- `PluginInfoTest`: nombre, `VERSION = 3`, `API_VERSION = 1`, clase
+- `PluginInfoTest`: nombre, `VERSION = 4`, `API_VERSION = 1`, clase
   `com.hdrama.HDramaPlugin` y `MAIN_URL`.
 
 ## 3. Fixtures
@@ -165,14 +167,16 @@ menos de 40 KB cada uno. `tmp/` no se versiona.
 
 ## 4. Verificación manual en emulador
 
-Dispositivo: emulador x86_64 Android 15 (AOSP) con CloudStream 4.9.1 y el
-plugin v3 instalado.
+Dispositivo: emulador x86_64 Android 15 (AOSP) con CloudStream 4.9.1. Las
+filas marcadas (v3) provienen de la verificación de la versión 3; la
+verificación final de la v4 la cierra el Lead al publicar la v1.2.1.
 
 | Paso | Resultado esperado | Evidencia |
 |---|---|---|
-| Instalar CloudStream y `HDrama.cs3` | Plugin cargado y proveedor visible | Verificado en emulador Android 15 con CloudStream 4.9.1: plugin v3 cargado y proveedor HDrama registrado |
+| Instalar CloudStream y `HDrama.cs3` (v3) | Plugin cargado y proveedor visible | Verificado en emulador Android 15 con CloudStream 4.9.1: plugin v3 cargado y proveedor HDrama registrado |
+| Instalar el plugin v4 | Pantalla principal con siete secciones y sin contenido de diagnóstico | Pendiente de la verificación final de la v1.2.1 |
 | Resolver el challenge de Cloudflare | Cookie `cf_clearance` disponible sin bloquear la interfaz | Verificado: log `Challenge resuelto; cookie de sesion actualizada`. El primer intento agotó los 45 s del timeout antiguo; el segundo resolvió a los ~44 s. Con el timeout actual de 75 s se espera que el primer intento baste. |
-| Abrir HDrama | Secciones Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros, Fuentes y Acceso | Verificado: catálogo real con portada y banner "Encadenadas" |
+| Abrir HDrama | Secciones Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros y Fuentes | Verificado: catálogo real con portada y banner "Encadenadas" |
 | Destacados | Portada real con títulos, pósters y notas | Verificado en la sesión de la v3 (portada y banner "Encadenadas") |
 | Novedades / Más vistos / Tendencias / Catálogo | Paginación real (24 por página) | Implementado; paginación cubierta por pruebas JVM |
 | Búsqueda | Resultados reales del sitio | Implementada y cubierta con fixtures reales |
@@ -180,7 +184,7 @@ plugin v3 instalado.
 | Reproducción de episodio | HLS real con `Rendered first frame` | Emitido `ExtractorLinkType.M3U8` directo; verificado en emulador con un episodio real el 2026-11-12 |
 | Descarga | MP4 concatenado a partir de los segmentos `.ts` | Verificada en emulador: 26.160.200 bytes en `/sdcard/Cloudstream3/AsianDramas/<serie>/Season 1 Episode 1 - Capítulo 1.mp4` y cola de descargas finalizada |
 | Respaldo sin sesión | Catálogo de sitemaps y ficha de navegación | Verificado: al fallar el challenge el catálogo se pobló con sitemaps y las fichas cayeron a navegación |
-| Demo | MP4 y HLS públicos en "Acceso a HDrama" | Implementado; ya verificado en las versiones anteriores y cubierto por pruebas JVM |
+| Sin contenido de diagnóstico | Sin sección "Acceso a HDrama" ni tarjetas demo en la UI | Pendiente de la verificación final de la v1.2.1 |
 | Búsqueda real (v3) | Resultados con pósters del sitio | Verificado: búsqueda `encadenadas` con tarjetas reales de HDrama |
 | Reproducción de episodio (v3) | HLS real con `Rendered first frame` | Verificado: `Fuentes bookId=14380 serial=1 resultado=2`, `SourceProbe` descartó el enlace 404 y el reproductor mostró video (`loadExo` → `Rendered first frame`) |
 
@@ -202,7 +206,8 @@ Capturas de la verificación de la v3 en [`Docs/images/`](images/):
 
 1. `:HDrama:testDebugUnitTest` en verde, sin red.
 2. `:HDrama:make` y `makePluginsJson` generan los artefactos.
-3. El plugin carga en CloudStream 4.9.1 y muestra las ocho secciones.
+3. El plugin carga en CloudStream 4.9.1 y muestra las siete secciones, sin
+   sección de diagnóstico ni contenido demo.
 4. Una ficha real muestra metadatos y episodios; un episodio real emite HLS
    directo reproducible.
 5. La descarga de un episodio HLS funciona desde el gestor de descargas de

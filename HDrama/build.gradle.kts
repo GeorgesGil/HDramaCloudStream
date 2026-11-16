@@ -1,5 +1,5 @@
 // Version entera obligatoria para plugins de CloudStream.
-version = 3
+version = 4
 
 cloudstream {
     description = "HDrama para CloudStream: catalogo, fichas, episodios y video HLS reales desde es.hdrama.net, con reproduccion y descarga y respaldo por sitemaps."

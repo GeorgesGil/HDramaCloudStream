@@ -1,16 +1,20 @@
-# Arquitectura (versión 3)
+# Arquitectura (versión 4)
 
-Fecha: 2026-11-12. Este documento describe la arquitectura implementada en la
-versión 3: capa de red reescrita para resolver el Cloudflare Managed Challenge
-una sola vez y hacer todo lo demás por OkHttp, API de fuentes con payload
-cifrado, URLs HLS directas y descarga delegada en CloudStream.
+Fecha: 2026-11-16. Este documento describe la arquitectura implementada en la
+versión 4. La v3 reescribió la capa de red para resolver el Cloudflare Managed
+Challenge una sola vez y hacer todo lo demás por OkHttp, con API de fuentes
+descifrada, URLs HLS directas y descarga delegada en CloudStream. La v4 no toca
+ese motor: retira de la extensión de producción todo lo visible de diagnóstico
+(sección "Acceso a HDrama" y catálogo demo) y deja la UI solo con contenido real
+de HDrama.
 
 ## 1. Resumen
 
 La versión 2 usaba un WebView nuevo por petición (`WebViewFetcher` como fetcher
 principal). En el emulador eso provocaba ANR, timeouts de 60 s y crash del
 renderer, y la reproducción nunca llegaba a resolver el HLS. La versión 3
-separa la sesión de Cloudflare de la capa HTTP:
+separa la sesión de Cloudflare de la capa HTTP; la versión 4 recorta el catálogo
+a contenido real:
 
 ```text
 CloudStream (MainAPI)
@@ -19,7 +23,7 @@ CloudStream (MainAPI)
 HDramaProvider
    │  mapea modelos de dominio ↔ SearchResponse/LoadResponse/ExtractorLink
    ▼
-CatalogRepository  (caché TTL + prioridad de adaptadores)
+CatalogRepository  (caché TTL + prioridad: solo contenido real)
    │
    ├── HdramaCatalogAdapter   → HTML real, metadatos, episodios y HLS
    │      ├── HdramaHttpFetcher (OkHttp + CloudflareSession + Mutex)
@@ -29,8 +33,7 @@ CatalogRepository  (caché TTL + prioridad de adaptadores)
    │      ├── HdramaSourceClient + HdramaSourceCipher (AES-256-GCM)
    │      └── HttpSourceProbe (descarta URLs de video muertas)
    ├── SitemapCatalogAdapter  → respaldo con sitemaps públicos (sin metadatos)
-   ├── DemoCatalogAdapter     → diagnóstico y último recurso (MP4/HLS públicos)
-   └── ManualHdramaImport / AccessCards → fichas de navegación
+   └── ManualHdramaImport     → fichas de navegación e importación manual
    │
    ▼
 LinkResolver → ExtractorLink (M3U8/VIDEO, URL directa sin headers)
@@ -39,10 +42,13 @@ LinkResolver → ExtractorLink (M3U8/VIDEO, URL directa sin headers)
 ExoPlayer (reproducción) / VideoDownloadManager (descarga HLS → MP4)
 ```
 
+`DemoCatalogAdapter` no forma parte de esta cadena: es una utilidad interna de
+las pruebas JVM (`DemoCatalogAdapterTest`) y no se instancia en producción.
+
 La prioridad la decide `CatalogRepository`: intenta el HTML real, si no hay
-resultados cae a sitemaps y, si el sitemap también falla, al catálogo demo. Una
-ficha concreta que no se puede descargar se convierte en ficha de navegación
-con el sitio original.
+resultados cae a sitemaps y, si el sitemap tampoco devuelve datos, la página
+queda vacía (no hay contenido sintético de relleno). Una ficha concreta que no
+se puede descargar se convierte en ficha de navegación con el sitio original.
 
 ## 2. Criterios técnicos
 
@@ -55,9 +61,9 @@ con el sitio original.
    petición queda eliminado.
 3. **Tolerancia.** El parser no lanza: los campos ausentes quedan en `null` y
    el cliente de fuentes devuelve `MediaSource.Unavailable` con un motivo.
-4. **Fallbacks.** Sitemaps, navegación y demo cubren fallos de Cloudflare, de
-   red y del propio sitio. La sesión se adelanta al cargar el plugin y antes de
-   la API de fuentes.
+4. **Fallbacks.** Sitemaps, navegación e importación manual cubren fallos de
+   Cloudflare, de red y del propio sitio; si tampoco hay datos, la sección queda
+   vacía. La sesión se adelanta al cargar el plugin y antes de la API de fuentes.
 5. **Sin DRM.** El sitio no usa DRM; solo se modelan HLS/MP4 normales.
 6. **Pruebas JVM.** El cifrado, el parser, el fetcher, el cliente de fuentes,
    la sonda de enlaces y los adaptadores se prueban con fixtures, transportes y
@@ -66,7 +72,7 @@ con el sitio original.
    (`newHomePageResponse`, `newSearchResponseList`, `newTvSeriesLoadResponse`,
    `newEpisode`, `newExtractorLink`), no constructores deprecados.
 8. **Compatibilidad.** `minSdk 21`, `compileSdk 35`, JVM target 1.8,
-   `apiVersion = 1`, `version = 3`.
+   `apiVersion = 1`, `version = 4`.
 
 ## 3. Estructura del repositorio
 
@@ -86,7 +92,7 @@ HDramaCloudStream/
 │   ├── README.md
 │   └── images/
 └── HDrama/
-    ├── build.gradle.kts             # version = 3, metadatos del plugin
+    ├── build.gradle.kts             # version = 4, metadatos del plugin
     └── src/
         ├── main/
         │   ├── AndroidManifest.xml
@@ -100,9 +106,8 @@ HDramaCloudStream/
         │       │   ├── HdramaRoutes.kt
         │       │   ├── HdramaCatalogAdapter.kt
         │       │   ├── SitemapCatalogAdapter.kt
-        │       │   ├── DemoCatalogAdapter.kt
+        │       │   ├── DemoCatalogAdapter.kt   # solo pruebas JVM
         │       │   ├── ManualHdramaImport.kt
-        │       │   ├── AccessCards.kt
         │       │   └── CatalogRepository.kt
         │       ├── parser/
         │       │   ├── HdramaHtmlParser.kt
@@ -160,7 +165,7 @@ HDramaCloudStream/
 
 ## 4. Secciones de la portada
 
-`CatalogSection` define las ocho secciones de `mainPage`, con claves estables
+`CatalogSection` define las siete secciones de `mainPage`, con claves estables
 (se guardan en el historial/ajustes de CloudStream):
 
 | Clave | Nombre mostrado | Ruta real | Paginación |
@@ -172,11 +177,10 @@ HDramaCloudStream/
 | `catalogo` | Catálogo general | `/series` | `/series/page/<N>` |
 | `generos` | Géneros | `/categories` | Una página |
 | `fuentes` | Fuentes | `/sources` | Una página |
-| `acceso` | Acceso a HDrama | Tarjetas locales | Una página |
 
 `Destacados`, `Géneros` y `Fuentes` solo tienen una página: sus elementos son
 tarjetas de navegación (género/fuente) que abren una página de recomendaciones
-del propio sitio. `Acceso a HDrama` se sirve de `AccessCards` sin red.
+del propio sitio. No hay secciones locales de diagnóstico ni catálogo demo.
 
 `HdramaRoutes` centraliza las rutas:
 
@@ -203,8 +207,8 @@ Dominio puro, sin tipos de CloudStream:
 
 - `Series`: `id` (= slug en el sitio real), `slug`, `title`, `synopsis?`,
   `genres`, `rating?` (0..10), `language`, `source`, `posterUrl?`,
-  `episodeCount?`, `pageUrl?`, `externalId?` (bookId), `demo`, `browserOnly`,
-  `isNewThisWeek`, `recommended`.
+  `episodeCount?`, `pageUrl?`, `externalId?` (bookId), `demo` (solo lo usa el
+  catálogo sintético de pruebas), `browserOnly`, `isNewThisWeek`, `recommended`.
 - `Episode`: `id` (`hdrama-demo://episode/<slug>/<n>`), `seriesId`,
   `number` (número mostrado), `title?`, `durationSeconds?`, `pageUrl?`,
   `externalId?` (`bookId:serial`), `mediaSources`, `subtitles`.
@@ -223,13 +227,12 @@ Dominio puro, sin tipos de CloudStream:
   fuentes.
 - `SitemapCatalogAdapter`: respaldo con sitemaps públicos; títulos derivados
   del slug y fichas de navegación.
-- `DemoCatalogAdapter`: 17 series sintéticas con MP4/HLS públicos, marcadas
-  como demo.
+- `DemoCatalogAdapter`: catálogo sintético local usado **solo por las pruebas
+  JVM**; no se instancia en producción ni se expone en la UI.
 - `ManualHdramaImport`: construye fichas de navegación desde una URL de HDrama
   cuando el HTML no se puede descargar; no hace red.
-- `AccessCards`: tarjetas locales de la sección "Acceso a HDrama" (abrir sitio,
-  importar enlace, prueba de reproducción demo).
-- `CatalogRepository`: aplica prioridad, caché TTL, deduplicación y respaldos.
+- `CatalogRepository`: aplica prioridad, caché TTL, deduplicación y respaldos;
+  si no hay datos reales devuelve la página vacía.
 
 ### `parser`
 
@@ -267,7 +270,7 @@ ficha; si no hay coincidencia, prefiere el que va seguido de `,"episodes"`.
 
 ### `network`
 
-La versión 3 divide la red en tres piezas:
+La capa de red se divide en tres piezas:
 
 1. **Sesión de Cloudflare.**
    - `CloudflareSession` (interfaz): `cookieHeader()`, `userAgent()`,
@@ -369,23 +372,21 @@ La versión 3 divide la red en tres piezas:
 
 ## 6. Prioridad y respaldos
 
-`CatalogRepository` resuelve cada operación con esta prioridad:
+`CatalogRepository` resuelve cada operación con esta prioridad (solo contenido
+real; no hay adaptador demo en la cadena):
 
 - **Sección / búsqueda:** `HdramaCatalogAdapter` (HTML real) → si no hay
-  resultados o lanza, `SitemapCatalogAdapter` → si también falla,
-  `DemoCatalogAdapter`.
-- **Ficha:** URL demo → `DemoCatalogAdapter`; URL de HDrama →
-  `HdramaCatalogAdapter.load` (con `ManualHdramaImport` como ficha de
-  navegación si el HTML falla) → `SitemapCatalogAdapter.load`; otra URL →
-  demo.
-- **Episodios:** series demo → `DemoCatalogAdapter`; series `browserOnly` →
-  `SitemapCatalogAdapter` (episodio "Abrir en el navegador"); series reales →
-  `HdramaCatalogAdapter` y, si el HTML falla o no devuelve episodios, sitemap.
-- **Fuentes:** series demo → `DemoCatalogAdapter`; episodio con
-  `mediaSources` propios (p. ej. `BrowserOnly`) → esas fuentes; caso real →
-  `HdramaCatalogAdapter.resolve`.
-- **Relacionadas:** series demo → `DemoCatalogAdapter`; series reales → HTML
-  real ("También te puede gustar").
+  resultados o lanza, `SitemapCatalogAdapter` → si tampoco devuelve datos,
+  página vacía. La UI de CloudStream no recibe contenido sintético.
+- **Ficha:** solo URLs de HDrama → `HdramaCatalogAdapter.load` (con
+  `ManualHdramaImport` como ficha de navegación si el HTML falla) →
+  `SitemapCatalogAdapter.load`; una URL ajena devuelve `null`.
+- **Episodios:** series `browserOnly` → `SitemapCatalogAdapter` (episodio
+  "Abrir en el navegador"); series reales → `HdramaCatalogAdapter` y, si el HTML
+  falla o no devuelve episodios, sitemap.
+- **Fuentes:** episodio con `mediaSources` propios (p. ej. `BrowserOnly`) → esas
+  fuentes; caso real → `HdramaCatalogAdapter.resolve`.
+- **Relacionadas:** HTML real ("También te puede gustar").
 
 Además, dentro del adaptador real:
 
@@ -420,7 +421,7 @@ global: cuando la sesión se resuelve, el catálogo real vuelve solo.
    de sección.
 2. `CatalogSection.fromKey` la mapea (desconocidas → `Novedades`).
 3. `CatalogRepository.section` consulta su caché (5 minutos) y luego el HTML
-   real; si no hay resultados, sitemaps; si falla, demo.
+   real; si no hay resultados, sitemaps; si tampoco, devuelve la página vacía.
 4. `HdramaCatalogAdapter.section` construye la URL con `HdramaRoutes`,
    descarga el HTML (caché 5 minutos), parsea según la sección y calcula
    `hasNext` (24 elementos por página; las secciones de una página fuerzan
@@ -432,19 +433,18 @@ global: cuando la sesión se resuelve, el catálogo real vuelve solo.
 
 1. `search(query, page)`:
    - si el texto es una URL de HDrama, se carga la ficha real (o navegación);
-   - si empieza por `prueba`, se ofrece el catálogo demo para diagnóstico;
    - en caso contrario, `GET /search?q=<texto>`.
 2. `HdramaHtmlParser.parseSearchResults` extrae títulos, pósters, notas y
    episodios de las tarjetas `article`.
 3. La búsqueda real es de una sola página; si el HTML falla, se usa la
-   búsqueda local del sitemap y, en último término, la del demo.
+   búsqueda local del sitemap.
 
 ### 7.4 Ficha de serie
 
-1. `load(url)`: recupera el esquema demo si CloudStream antepuso `mainUrl`
-   (`recoverDemoSeriesUrl`).
-2. `CatalogRepository.load` enruta: demo → `DemoCatalogAdapter`; URL de HDrama
-   → `HdramaCatalogAdapter.load` con respaldo de sitemap; otra URL → demo.
+1. `load(url)`: solo se aceptan URLs del dominio de HDrama; el resto se
+   rechaza con `ErrorLoadingException`.
+2. `CatalogRepository.load` enruta: URL de HDrama → `HdramaCatalogAdapter.load`
+   con respaldo de sitemap; una URL ajena devuelve `null`.
 3. `HdramaCatalogAdapter.load` distingue URL de episodio, de serie o de
    directorio; descarga el HTML (caché) y parsea `HdramaSeriesPage`.
 4. `episodes(series)` devuelve la lista completa del HTML (id estable
@@ -458,9 +458,8 @@ global: cuando la sesión se resuelve, el catálogo real vuelve solo.
 ### 7.5 Reproducción y descarga
 
 1. `loadLinks(data, ...)`: `data` es un `EpisodeId`; `findEpisode` recupera la
-   serie y el episodio (desde caché, demo o reparseando la ficha).
+   serie y el episodio (desde caché o reparseando la ficha).
 2. `resolve(episode)`:
-   - demo → fuentes del catálogo demo;
    - `episode.mediaSources` no vacío (p. ej. `BrowserOnly`) → esas fuentes;
    - caso real → `HdramaCatalogAdapter.resolve` → `HdramaSourceClient.sources`.
 3. `HdramaSourceClient` hace el warm-up de la portada, consulta la API con
@@ -494,8 +493,8 @@ global: cuando la sesión se resuelve, el catálogo real vuelve solo.
   ficha (`pageUrl`).
 - Pegar una URL `https://es.hdrama.net/series/<slug>` en la búsqueda abre su
   ficha real; si no se puede descargar, se crea una ficha de navegación.
-- Las tarjetas de "Acceso a HDrama" no hacen red salvo la demo y el sitio
-  oficial.
+- No hay tarjetas locales de acceso ni contenido demo: la extensión solo
+  muestra secciones y fichas del sitio.
 
 ## 8. Caché y rendimiento
 
@@ -514,7 +513,7 @@ global: cuando la sesión se resuelve, el catálogo real vuelve solo.
 | Timeout de `loadLinks` | `HDramaProvider` | 90 s | — |
 
 - Sin caché en disco.
-- Páginas de 24 elementos en el adaptador real (12 en sitemap y demo).
+- Páginas de 24 elementos en el adaptador real (12 en el de sitemaps).
 - La caché de fuentes respeta la caducidad de los tokens del sitio (no
   precachear más de 5 minutos).
 - Los reintentos de la capa de sitemaps (3 intentos y backoff 250/500 ms)
@@ -543,16 +542,21 @@ global: cuando la sesión se resuelve, el catálogo real vuelve solo.
    muertos y CloudStream reproduce el primero de la lista; `SourceProbe` los
    descarta y, si no queda ninguno, entrega los originales para no ocultar el
    error real.
-8. **Respaldo por sitemaps y navegación**: la app sigue siendo utilizable si
+8. **Solo contenido real en producción.** La v4 retira la sección de diagnóstico
+   y el catálogo demo de la UI: o se muestran datos de HDrama (HTML o sitemaps),
+   o la sección queda vacía. `DemoCatalogAdapter` queda como utilidad de pruebas
+   JVM.
+9. **Respaldo por sitemaps y navegación**: la app sigue siendo utilizable si
    Cloudflare, la API o los hosts de video fallan.
-9. **La URL del episodio identifica la ficha**; `externalId` identifica la
-   fuente (`bookId:serial`) y no se muestra al usuario.
+10. **La URL del episodio identifica la ficha**; `externalId` identifica la
+    fuente (`bookId:serial`) y no se muestra al usuario.
 
 ## 10. Riesgos
 
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
-| Cloudflare no resuelve el challenge | Sin HTML real | Warm-up + fallo rápido; respaldo por sitemaps, navegación y demo |
+| Cloudflare no resuelve el challenge | Sin HTML real | Warm-up + fallo rápido; respaldo por sitemaps, navegación y página vacía |
+| Fallan la sesión, la red y los sitemaps | Sección sin resultados | La página queda vacía; no hay contenido sintético de relleno |
 | Emulador lento agota el timeout del challenge | Primera carga sin sesión | Timeout de 75 s y backoff de 15 s; reintento en la siguiente operación |
 | La API o la clave AES cambian | Sin HLS | Parser/cliente tolerantes; `Unavailable` claro; actualizar plugin |
 | Tokens caducados | Episodio no reproduce | Resolver al reproducir, caché de 5 min |

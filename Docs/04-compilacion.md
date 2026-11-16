@@ -1,9 +1,9 @@
-# Compilación (versión 3)
+# Compilación (versión 4)
 
-Fecha de ejecución: 2026-11-12, America/Santo_Domingo.
+Fecha de ejecución: 2026-11-16, America/Santo_Domingo.
 
 Este documento recoge el entorno y los comandos con los que se compila y prueba
-el plugin **v3** (`HDrama/build.gradle.kts` fija `version = 3`). El build se
+el plugin **v4** (`HDrama/build.gradle.kts` fija `version = 4`). El build se
 ejecuta en Windows con Eclipse Adoptium Temurin 21.0.13+9 y el SDK de Android en
 `C:\Android`.
 
@@ -27,7 +27,7 @@ ejecuta en Windows con Eclipse Adoptium Temurin 21.0.13+9 y el SDK de Android en
 | JVM target | 1.8 |
 | CloudStream de referencia | `pre-release` (2026-11-09, probado con 4.9.1) |
 | `apiVersion` del plugin | 1 |
-| Versión del plugin | 3 |
+| Versión del plugin | 4 |
 
 El `JAVA_HOME` heredado del equipo puede apuntar a una ruta inexistente
 (`C:\Program Files\Android\openjdk\jdk-21.0.8`); por eso cada sesión fija el JDK
@@ -108,7 +108,7 @@ Created ...\build\plugins.json
 BUILD SUCCESSFUL
 ```
 
-Total de pruebas de la suite: **117 pruebas unitarias en
+Total de pruebas de la suite: **116 pruebas unitarias en
 18 suites** (0 fallos esperados; ver
 [`05-pruebas.md`](05-pruebas.md)).
 
@@ -116,7 +116,7 @@ Total de pruebas de la suite: **117 pruebas unitarias en
 
 | Artefacto | Ruta | Tamaño | SHA-256 |
 |---|---|---|---|
-| Plugin | `HDrama/build/HDrama.cs3` | 143.227 bytes (140 KB) | be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d |
+| Plugin | `HDrama/build/HDrama.cs3` | 140.492 bytes (137 KB) | 83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee |
 | Índice | `build/plugins.json` | — | — |
 
 El `.cs3` contiene:
@@ -126,7 +126,7 @@ manifest.json
 classes.dex
 ```
 
-El `manifest.json` generado declara `version: 3`, `name: "HDrama"` y
+El `manifest.json` generado declara `version: 4`, `name: "HDrama"` y
 `pluginClassName: "com.hdrama.HDramaPlugin"`.
 
 ## 5. Advertencias
