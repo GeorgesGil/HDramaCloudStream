@@ -15,7 +15,6 @@ enum class CatalogSection(val key: String, val displayName: String) {
     CATALOGO("catalogo", "Catálogo general"),
     GENEROS("generos", "Géneros"),
     FUENTES("fuentes", "Fuentes"),
-    ACCESO("acceso", "Acceso a HDrama"),
     ;
 
     companion object {

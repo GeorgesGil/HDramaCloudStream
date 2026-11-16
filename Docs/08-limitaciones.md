@@ -1,12 +1,12 @@
 # Limitaciones técnicas
 
-Fecha: 2026-11-12. Aplica a la versión 3 del plugin.
+Fecha: 2026-11-16. Aplica a la versión 4 del plugin.
 
 ## 1. Dependencia de la sesión WebView y Cloudflare
 
 `GET https://es.hdrama.net/` responde con un **Cloudflare Managed Challenge**
 (HTTP 403 + `Cf-Mitigated: challenge`) cuando el cliente no tiene cookies
-válidas. La versión 3 lo resuelve una sola vez por proceso con
+válidas. El plugin lo resuelve una sola vez por proceso con
 `WebViewCloudflareSession`: crea un único WebView, carga la portada, sondea
 `CookieManager` hasta obtener `cf_clearance` (cada 350 ms, timeout 75 s) y
 destruye el WebView. Todas las peticiones posteriores van por OkHttp con esa
@@ -91,7 +91,9 @@ particular:
 
 El respaldo por sitemaps mantiene títulos y navegación, pero no aporta
 portadas, sinopsis, géneros, nota ni episodios: en ese modo la ficha es de
-navegación.
+navegación. Si tampoco hay datos de sitemaps, la sección queda vacía: la
+extensión de producción no incluye contenido sintético de relleno ni sección de
+diagnóstico.
 
 ## 5. Repositorio e instalación por URL
 
@@ -102,7 +104,8 @@ navegación.
   `/sdcard/Cloudstream3/plugins/` o usar ADB.
 - El workflow de GitHub Actions publica en la rama `builds` y adjunta el `.cs3`
   a cada release (comprobado en la v1.2.0: `plugins.json` con
-  `fileHash: sha256-be21cdb8…` y `HDrama.cs3` de 143.227 bytes adjunto).
+  `fileHash: sha256-be21cdb8…` y `HDrama.cs3` de 143.227 bytes adjunto). La
+  v1.2.1 actualiza la rama y la release con el artefacto v4.
 
 ## 6. Hardware físico no disponible
 

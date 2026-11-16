@@ -6,7 +6,7 @@ import com.hdrama.models.MediaSource
 import com.hdrama.models.Series
 
 /**
- * Contrato de una fuente de catalogo. Permite intercambiar el catalogo demo
+ * Contrato de una fuente de catalogo. Permite intercambiar adaptadores
  * por un adaptador HDrama con metadatos completos sin cambiar el provider.
  */
 interface CatalogAdapter {

@@ -3,20 +3,24 @@
 Extensión de [CloudStream](https://github.com/recloudstream/cloudstream) para
 [es.hdrama.net](https://es.hdrama.net/), escrita en Kotlin.
 
-**Estado:** versión 3 (release de referencia v1.2.0), beta. El catálogo, la
+**Estado:** versión 4 (release de referencia v1.2.1), beta. El catálogo, la
 búsqueda, las fichas, los episodios y el video HLS se obtienen del sitio real.
-La versión 3 reescribe la capa de red: el Cloudflare Managed Challenge se
-resuelve **una sola vez** en un WebView y todas las peticiones (HTML y API) se
-hacen después por OkHttp con la cookie `cf_clearance`, el User-Agent del WebView
-y `Referer: https://es.hdrama.net/`. El resultado son URLs HLS directas, sin
-proxy ni cabeceras, que ExoPlayer reproduce y CloudStream puede descargar.
+La versión 4 limita la extensión al **contenido real** de `es.hdrama.net`: la
+pantalla principal tiene siete secciones y ya no hay sección de diagnóstico ni
+catálogo demo en la UI. Se mantiene la capa de red de la versión 3: el
+Cloudflare Managed Challenge se resuelve **una sola vez** en un WebView y todas
+las peticiones (HTML y API) se hacen después por OkHttp con la cookie
+`cf_clearance`, el User-Agent del WebView y `Referer: https://es.hdrama.net/`.
+El resultado son URLs HLS directas, sin proxy ni cabeceras, que ExoPlayer
+reproduce y CloudStream puede descargar.
 
 ## Qué funciona
 
 | Función | Estado |
 |---|---|
 | Plugin `.cs3` y registro del proveedor HDrama | Implementado; carga verificada en CloudStream 4.9.1 |
-| Secciones: Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros, Fuentes y Acceso | Implementadas con el HTML real |
+| Secciones: Destacados, Novedades, Más vistos, Tendencias, Catálogo general, Géneros y Fuentes | Implementadas con el HTML real |
+| Contenido de la UI: solo series reales del sitio | Implementado; sin sección de diagnóstico ni catálogo demo |
 | Búsqueda real (`/search?q=`) | Implementada |
 | Ficha real: póster, sinopsis, géneros, nota, año y relacionadas | Implementada |
 | Lista completa de episodios con duración y número mostrado | Implementada |
@@ -27,11 +31,10 @@ proxy ni cabeceras, que ExoPlayer reproduce y CloudStream puede descargar.
 | Descarga desde CloudStream | Implementada; CloudStream descarga el HLS y concatena los segmentos en un MP4 |
 | Descifrado AES-256-GCM del payload `/api/episode-source` | Implementado y probado con vectores, incluida la fuente Stardust |
 | Respaldo por sitemaps y fichas de navegación sin sesión | Implementado |
-| Catálogo demo con MP4/HLS públicos ("Acceso a HDrama") | Implementado |
 | Estados de error diferenciados y mensajes en español | Implementado |
 | Subtítulos | Soportados si la fuente los aporta |
 | Favoritos, historial, continuar viendo y pantalla completa | Nativos de CloudStream |
-| Pruebas unitarias JVM | 117 pruebas unitarias en 18 suites |
+| Pruebas unitarias JVM | 116 pruebas unitarias en 18 suites |
 
 ## Capturas
 
@@ -48,7 +51,8 @@ CloudStream 4.9.1): ficha real con 125 episodios, reproducción HLS real
 | ![Búsqueda v3](Docs/images/09-busqueda-real-v3.png) |
 
 Capturas de la verificación de la versión 2 (emulador Android 14 + CloudStream
-4.9.1). La versión 3 conserva el mismo catálogo y las mismas fichas:
+4.9.1). Las versiones 3 y 4 conservan el mismo catálogo y las mismas fichas;
+las capturas de la versión 4 quedan pendientes de adjuntar.
 
 | Catálogo real (HTML) | Ficha real con episodios |
 |---|---|
@@ -61,10 +65,6 @@ entonces solo con sitemaps); el detalle de pruebas está en
 | Catálogo v1 | Ficha v1 |
 |---|---|
 | ![Catálogo](Docs/images/01-catalogo-real-sitemap.png) | ![Ficha](Docs/images/02-ficha-real-navegador.png) |
-
-| Demo con episodios | Reproducción MP4 |
-|---|---|
-| ![Demo](Docs/images/03-ficha-demo-episodios.png) | ![Player](Docs/images/04-reproduccion-mp4.png) |
 
 ## Cómo funciona
 
@@ -87,8 +87,10 @@ entonces solo con sitemaps); el detalle de pruebas está en
 5. La descarga la gestiona CloudStream: para un enlace `M3U8` usa
    `downloadHLS`; al ser una media playlist sin variantes, descarga los
    segmentos `.ts` y los concatena en un MP4.
-6. Si la sesión, la red o los hosts de video fallan, se usa el sitemap público
-   (títulos y navegación) y el catálogo demo como último recurso.
+6. Si la sesión, la red o los hosts de video fallan, el plugin usa los sitemaps
+   públicos (títulos y navegación) y las fichas de navegación; si tampoco hay
+   datos, la sección queda vacía. No hay contenido sintético de relleno en la
+   extensión de producción.
 
 ## Compilación
 
@@ -106,8 +108,8 @@ $env:GRADLE_USER_HOME="$PWD\.gradle-home"  # opcional: caché de Gradle dentro d
 .\gradlew.bat makePluginsJson
 ```
 
-Artefacto: `HDrama/build/HDrama.cs3` (tamaño: 143.227 bytes (140 KB); SHA-256:
-be21cdb8464df6d44c10929d86ff16830b2fcdf5ef8498cfe99c9fcf3904fc8d).
+Artefacto: `HDrama/build/HDrama.cs3` (tamaño: 140.492 bytes (137 KB); SHA-256:
+83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee).
 
 Solo puede ejecutarse una compilación a la vez: crear `.build-lock` antes y
 borrarlo después (ver [`Docs/04-compilacion.md`](Docs/04-compilacion.md)).
@@ -138,15 +140,17 @@ directamente en CloudStream. Procedimiento completo en
 
 ```text
 HDramaProvider (CloudStream MainAPI)
-  └── CatalogRepository (prioridad + caché TTL)
+  └── CatalogRepository (prioridad + caché TTL; solo contenido real)
        ├── HdramaCatalogAdapter   (HTML real; fetcher OkHttp + parser + fuentes HLS)
        ├── SitemapCatalogAdapter  (respaldo: sitemaps públicos)
-       ├── DemoCatalogAdapter     (diagnóstico: datos sintéticos + MP4/HLS públicos)
-       └── AccessCards / ManualHdramaImport (navegación e importación)
+       └── ManualHdramaImport     (fichas de navegación e importación manual)
   └── LinkResolver → ExtractorLink (M3U8/VIDEO)
 ```
 
-- `catalog/`: secciones, rutas reales, adaptadores y repositorio.
+`DemoCatalogAdapter` sigue en el código únicamente como utilidad de pruebas JVM
+(`DemoCatalogAdapterTest`); no se instancia en la extensión de producción.
+
+- `catalog/`: siete secciones y rutas reales, adaptadores (HTML real y sitemaps) y repositorio.
 - `parser/`: jsoup + JSON-LD, contrato de selectores y fixtures reales.
 - `network/`: sesión Cloudflare (`CloudflareSession`, `WebViewCloudflareSession`), fetcher OkHttp (`HdramaHttpFetcher`), respaldo WebView, allowlist, sitemaps y caché.
 - `sources/`: cifrado AES-256-GCM, cliente de la API de fuentes y sonda de disponibilidad de enlaces.
@@ -162,6 +166,8 @@ Detalle en [`Docs/03-arquitectura.md`](Docs/03-arquitectura.md).
   Cloudflare Managed Challenge en el WebView (hasta 75 s en equipos lentos); si
   el challenge no se resuelve, el catálogo cae a los sitemaps y las fichas a
   navegación.
+- Si fallan la sesión, la red y los sitemaps, la sección queda vacía: la
+  extensión no incluye contenido sintético de relleno ni sección de diagnóstico.
 - Los tokens de video caducan: las fuentes se resuelven al reproducir.
 - Los hosts de video son de terceros y pueden fallar o cambiar; el proxy espejo
   anterior ya no existe y el plugin emite solo URLs directas.

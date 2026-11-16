@@ -101,12 +101,4 @@ class DemoCatalogAdapterTest {
         assertTrue(related.isNotEmpty())
         assertTrue(related.all { it.id != series.id })
     }
-
-    @Test
-    fun `seccion de acceso contiene navegacion e importacion`(): Unit = runBlocking {
-        val access = catalog.section(CatalogSection.ACCESO, 1)
-        assertEquals(3, access.items.size)
-        assertTrue(access.items.all { it.browserOnly || it.demo })
-        assertTrue(access.items.filter { it.browserOnly }.all { it.pageUrl?.startsWith("https://es.hdrama.net/") == true })
-    }
 }

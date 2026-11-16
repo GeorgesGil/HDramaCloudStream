@@ -3,6 +3,55 @@
 Todas las fechas en ISO 8601. Formato basado en
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [v1.2.1] - 2026-11-16
+
+Versión 4 del plugin (el número de release es `v1.2.1`; el entero interno del
+`.cs3` es `version = 4`). Limpieza de producción: se retira de la extensión todo
+lo visible de diagnóstico (sección "Acceso a HDrama" y catálogo demo) y la
+pantalla principal queda solo con contenido real de HDrama.
+
+### Cambiado
+
+- La pantalla principal queda con **siete secciones**: Destacados, Novedades,
+  Más vistos, Tendencias, Catálogo general, Géneros y Fuentes.
+- `HDramaProvider`: sin atajo de búsqueda "prueba" ni ramas de demo en `load`,
+  `buildPlot`, `seriesUrl`, `toSearchResponse` ni `toCloudEpisode`; ya no se
+  recuperan URLs internas de demo.
+- `CatalogRepository`: la cadena de respaldo es HTML real → sitemaps → página
+  vacía; las fichas de otras URLs devuelven `null` (la importación manual y las
+  fichas de navegación/`browserOnly` se mantienen).
+- `DemoCatalogAdapter` queda como utilidad interna de pruebas JVM: no se
+  instancia en producción y no se expone en la UI.
+- `HDrama/build.gradle.kts`: `version = 4`; `PluginInfo.VERSION = 4`;
+  `API_VERSION` sigue siendo `1`.
+- Documentación y metadatos actualizados a la versión 4 / release v1.2.1.
+
+### Eliminado
+
+- La sección "Acceso a HDrama" (`CatalogSection.ACCESO`), `AccessCards.kt` y sus
+  ramas en `HdramaCatalogAdapter`, `SitemapCatalogAdapter` y
+  `DemoCatalogAdapter`.
+- El atajo de búsqueda `prueba` y el catálogo demo como último recurso, incluidas
+  las fichas demo del provider.
+- El contenido sintético visible en la extensión de producción (tarjetas
+  "HDrama: abrir sitio", "Importar enlace" y "Prueba de reproducción").
+
+### Corregido
+
+- La sección de diagnóstico aparecía en la extensión de producción: la UI
+  mostraba tarjetas de "Acceso a HDrama" y contenido demo ajeno a HDrama.
+
+### Notas
+
+- `apiVersion = 1`; probado con CloudStream 4.9.1 / pre-release 2026-11-09.
+- JDK Eclipse Adoptium Temurin 21.0.13+9, Gradle 8.12, AGP 8.7.3, Kotlin 2.3.0,
+  compileSdk 35, minSdk 21.
+- Total de pruebas de la suite: 116 pruebas unitarias en
+  18 suites.
+- Artefacto `.cs3`: 140.492 bytes (137 KB) / SHA-256 `83d47821e4b4b5bcf8a3575fe3ef73473b37c48acf317da5c98d9f8ecb65bdee`.
+- La verificación en emulador y la publicación de la release v1.2.1 se cierran
+  en la entrega.
+
 ## [v1.2.0] - 2026-11-12
 
 Versión 3 del plugin (el número de release es `v1.2.0`; el entero interno del
@@ -229,6 +278,7 @@ Versión 2 del plugin (el número de release es `v1.1.0`; el entero interno del
 - `apiVersion = 1`; CloudStream 4.9.1 / pre-release 2026-11-09.
 - JDK 21.0.13, Gradle 8.12, AGP 8.7.3, Kotlin 2.3.0, compileSdk 35.
 
+[v1.2.1]: https://github.com/GeorgesGil/HDramaCloudStream/compare/v1.2.0...v1.2.1
 [v1.2.0]: https://github.com/GeorgesGil/HDramaCloudStream/compare/v1.1.0...v1.2.0
 [v1.1.0]: https://github.com/GeorgesGil/HDramaCloudStream/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://github.com/GeorgesGil/HDramaCloudStream/releases/tag/v1.0.0

@@ -14,11 +14,12 @@ import com.hdrama.utils.UrlUtils
  * Prioridad:
  * 1. HTML real de HDrama (metadatos, episodios y HLS).
  * 2. Sitemaps publicos (respaldo si Cloudflare/red fallan).
- * 3. Catalogo demo local (diagnostico y ultimo recurso).
- * 4. Importacion manual de URLs para fichas concretas.
+ * 3. Importacion manual de URLs para fichas concretas.
+ *
+ * No hay contenido sintetico: si la red y el respaldo fallan se devuelve una
+ * pagina vacia para que la UI de CloudStream muestre solo secciones reales.
  */
 class CatalogRepository(
-    private val demo: DemoCatalogAdapter = DemoCatalogAdapter(),
     private val sitemap: SitemapCatalogAdapter = SitemapCatalogAdapter(),
     private val hdrama: HdramaCatalogAdapter = HdramaCatalogAdapter(),
     private val cache: TtlCache<String, Any> = TtlCache(
@@ -35,7 +36,7 @@ class CatalogRepository(
         val result = when {
             live != null && live.items.isNotEmpty() -> live
             else -> runCatching { sitemap.section(section, page) }
-                .getOrElse { demo.section(section, page) }
+                .getOrElse { CatalogPage.empty(page) }
         }
         cache.put(key, result)
         return result
@@ -50,7 +51,7 @@ class CatalogRepository(
         val result = when {
             live != null && live.items.isNotEmpty() -> live
             else -> runCatching { sitemap.search(query, page) }
-                .getOrElse { demo.search(query, page) }
+                .getOrElse { CatalogPage.empty(page) }
         }
         cache.put(key, result)
         return result
@@ -59,11 +60,10 @@ class CatalogRepository(
     suspend fun load(url: String?): Series? {
         val raw = url?.trim().orEmpty()
         if (raw.isBlank()) return null
-        val series = when {
-            UrlUtils.isDemoSeriesUrl(raw) -> demo.load(raw)
-            UrlUtils.isAllowedHdramaUrl(raw) -> hdrama.load(raw) ?: sitemap.load(raw)
-            else -> demo.load(raw)
-        }
+        // Solo se abren fichas del dominio de HDrama; cualquier otra URL se
+        // rechaza para no inventar contenido fuera del sitio.
+        if (!UrlUtils.isAllowedHdramaUrl(raw)) return null
+        val series = hdrama.load(raw) ?: sitemap.load(raw)
         if (series != null) cache.put("series:${series.id}", series)
         return series
     }
@@ -71,8 +71,7 @@ class CatalogRepository(
     suspend fun seriesById(id: String): Series? {
         @Suppress("UNCHECKED_CAST")
         cache.get("series:$id")?.let { return it as Series }
-        val found = demo.byId(id)
-            ?: hdrama.load(UrlUtils.seriesPageUrl(id))
+        val found = hdrama.load(UrlUtils.seriesPageUrl(id))
             ?: sitemap.load(UrlUtils.seriesPageUrl(id))
         if (found != null) cache.put("series:$id", found)
         return found
@@ -80,22 +79,17 @@ class CatalogRepository(
 
     suspend fun episodes(series: Series): List<Episode> {
         val episodes = when {
-            series.demo -> demo.episodes(series)
             series.browserOnly -> sitemap.episodes(series)
             else -> hdrama.episodes(series)
         }
-        if (episodes.isNotEmpty() || series.browserOnly || series.demo) return episodes
+        if (episodes.isNotEmpty() || series.browserOnly) return episodes
         // Respaldo: si el HTML fallo, el sitemap ofrece navegacion al sitio.
         return runCatching { sitemap.episodes(series) }.getOrElse { emptyList() }
     }
 
     suspend fun resolve(episode: Episode): List<MediaSource> {
-        val series = seriesById(episode.seriesId)
-        return when {
-            series?.demo == true -> demo.resolve(episode)
-            episode.mediaSources.isNotEmpty() -> episode.mediaSources
-            else -> hdrama.resolve(episode)
-        }
+        if (episode.mediaSources.isNotEmpty()) return episode.mediaSources
+        return hdrama.resolve(episode)
     }
 
     suspend fun findEpisode(data: String?): Episode? {
@@ -104,12 +98,8 @@ class CatalogRepository(
         return episodes(series).firstOrNull { it.number == parsed.number }
     }
 
-    suspend fun related(series: Series): List<Series> = when {
-        series.demo -> demo.related(series)
-        else -> runCatching { hdrama.related(series) }.getOrElse { emptyList() }
-    }
-
-    fun demoAdapter(): DemoCatalogAdapter = demo
+    suspend fun related(series: Series): List<Series> =
+        runCatching { hdrama.related(series) }.getOrElse { emptyList() }
 
     fun sitemapAdapter(): SitemapCatalogAdapter = sitemap
 

@@ -36,7 +36,6 @@ class SitemapCatalogAdapter(
             )
             CatalogSection.GENEROS -> paginate(snapshot.genreCards(), page)
             CatalogSection.FUENTES -> paginate(snapshot.sourceCards(), page)
-            CatalogSection.ACCESO -> paginate(AccessCards.all(), page)
         }
     }
 

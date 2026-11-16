@@ -11,12 +11,13 @@ import com.hdrama.utils.UrlUtils
 /**
  * Catalogo sintetico local.
  *
- * No contiene metadatos de HDrama. Sirve para verificar todos los flujos del
+ * **Solo para pruebas y diagnostico interno**: no se instancia en produccion ni
+ * se expone en la UI de la extension. Sirve para verificar los flujos del
  * plugin con datos permitidos y videos de dominio publico:
  * - MP4: trailer de Sintel (Blender, CC BY 3.0, alojado en media.w3.org).
  * - HLS: stream de prueba publico de Mux.
  *
- * Los titulos son ficticios y estan etiquetados como demo en la UI.
+ * Los titulos son ficticios.
  */
 class DemoCatalogAdapter(
     private val pageSize: Int = 12,
@@ -40,8 +41,7 @@ class DemoCatalogAdapter(
             CatalogSection.TENDENCIAS -> seriesOrder.filter { it.isNewThisWeek }
             CatalogSection.CATALOGO -> seriesOrder
             CatalogSection.GENEROS -> seriesOrder.sortedBy { it.genres.firstOrNull() ?: "" }
-            CatalogSection.FUENTES -> accessCards().filter { it.browserOnly }
-            CatalogSection.ACCESO -> accessCards()
+            CatalogSection.FUENTES -> seriesOrder
         }
         return paginate(items.distinctBy { it.id }, page)
     }
@@ -64,7 +64,7 @@ class DemoCatalogAdapter(
             return manualHdramaImport(raw)
         }
         val id = UrlUtils.demoSeriesId(raw) ?: raw.takeIf { !it.contains("://") }
-        return id?.let { seriesById[it] } ?: accessCards().firstOrNull { it.id == id }
+        return id?.let { seriesById[it] }
     }
 
     override suspend fun episodes(series: Series): List<Episode> {
@@ -77,9 +77,9 @@ class DemoCatalogAdapter(
     override suspend fun related(series: Series): List<Series> =
         series.relatedIds.mapNotNull { seriesById[it] }
 
-    fun allSeries(): List<Series> = seriesOrder + accessCards()
+    fun allSeries(): List<Series> = seriesOrder
 
-    fun byId(id: String): Series? = seriesById[id] ?: accessCards().firstOrNull { it.id == id }
+    fun byId(id: String): Series? = seriesById[id]
 
     private fun paginate(items: List<Series>, page: Int): CatalogPage<Series> {
         val safePage = page.coerceAtLeast(1)
@@ -88,8 +88,6 @@ class DemoCatalogAdapter(
         val slice = items.drop(from).take(pageSize)
         return CatalogPage(slice, safePage, from + slice.size < items.size)
     }
-
-    private fun accessCards(): List<Series> = AccessCards.all()
 
     private fun manualHdramaImport(url: String): Series? = ManualHdramaImport.fromUrl(url)
 
